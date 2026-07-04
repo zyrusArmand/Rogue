@@ -214,7 +214,7 @@
       <button id="homeHow" class="mbtn" title="How to Play"><span>?</span></button>
     </div>
     <div style="margin-bottom:auto"></div>
-    <div id="homeVer" style="position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.85"></div>
+    <div id="homeVer" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.85"></div>
   </div>
 
   <div class="overlay" id="loadoutO">
@@ -268,7 +268,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.11.0';
+const GAME_VERSION='1.11.1';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
    shift the whole frame sideways. Pin it. */
