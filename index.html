@@ -12,7 +12,10 @@
     font-family:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;}
   #app{position:fixed;inset:0;}
   #frame{position:fixed;inset:0;overflow:hidden;background:#04060c;}
-  #net{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation;}
+  #net{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+  .tapmark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(55,224,255,.9);border-radius:50%;
+    pointer-events:none;z-index:9;animation:tapping .45s ease-out forwards;}
+  @keyframes tapping{0%{transform:scale(.5);opacity:.95;}100%{transform:scale(1.6);opacity:0;}}
   #scan{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.55;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0px,rgba(0,0,0,.16) 1px,transparent 1px,transparent 3px);}
   #vig{position:absolute;inset:0;pointer-events:none;z-index:3;
@@ -306,7 +309,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.16.0';
+const GAME_VERSION='1.16.1';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1191,11 +1194,22 @@ function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const 
   let px=ROT?(cy-r.top):(cx-r.left), py=ROT?(r.right-cx):(cy-r.top);
   const vw=ROT?r.height:r.width, vh=ROT?r.width:r.height;
   if(vw>0&&vh>0){ px*=CSSW/vw; py*=CSSH/vh; }
-  let best=null,bd=1e9; for(const n of NODES){const dd=(px-n.x)**2+(py-n.y)**2; if(dd<bd){bd=dd;best=n;}}
-  if(!best||bd>32*32){ G.sel=-1; showPanel(); return; }
+  // visible ring at the registered touch point — instant feedback that aim matches finger
+  { const m=document.createElement('div'); m.className='tapmark'; m.style.left=px+'px'; m.style.top=py+'px';
+    document.getElementById('frame').appendChild(m); setTimeout(()=>m.remove(),500); }
+  // pick within reach, preferring nodes you can act on — a locked hub shouldn't
+  // steal the tap from the small relay next to it
+  let best=null,bd=1e9;
+  for(const n of NODES){ const dd=(px-n.x)**2+(py-n.y)**2; if(dd>34*34) continue;
+    const actionable=n.owned||n.enemy||canTake(n);
+    const score=dd*(actionable?1:2.4);
+    if(score<bd){bd=score;best=n;} }
+  if(!best){ G.sel=-1; showPanel(); return; }
   G.sel=best.id; showPanel(); }
-cvs.addEventListener('click',e=>tap(e.clientX,e.clientY));
-cvs.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];tap(t.clientX,t.clientY);},{passive:false});
+/* one modern input path — pointer events keep mouse and touch coordinates consistent */
+cvs.addEventListener('pointerdown',e=>{ e.preventDefault(); tap(e.clientX,e.clientY); });
+/* block pinch-zoom during gameplay: a zoomed page desyncs touch coords from the map */
+document.addEventListener('gesturestart',e=>{ if(!anyMenuShown()) e.preventDefault(); });
 function floatAt(n,txt,col){ const f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.color=col;
   f.style.left=(n.x-16)+'px'; f.style.top=(n.y-12)+'px'; document.getElementById('frame').appendChild(f); setTimeout(()=>f.remove(),1000); }
 function banner(cls,html){ const el=document.getElementById('banner'); el.className=cls; el.innerHTML=html; el.style.opacity='1'; G.bannerT=6; }
