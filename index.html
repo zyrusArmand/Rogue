@@ -333,7 +333,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.27.0';
+const GAME_VERSION='1.28.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -625,14 +625,14 @@ let START=0; const UNLOCK=3;
    BOOST_POOL is the full roster; the player picks 4 into their LOADOUT on the home screen.
    All are balanced to be different, not stronger — variety, not power. */
 const BOOST_POOL=[
-  {id:'worm',   n:'Worm',    d:'nodes 20% off · 10s',      cost:30, dur:10, cd:20},
-  {id:'eff',    n:'Botnet',  d:'income +25% · 10s',        cost:40, dur:10, cd:20},
-  {id:'stealth',n:'Rootkit', d:'rapid cooldown · 8s',      cost:50, dur:8,  cd:22},
-  {id:'ghost',  n:'Ghost',   d:'trace 35% slower · 10s',   cost:60, dur:10, cd:25},
-  {id:'surge',  n:'Surge',   d:'income +55% · 6s',         cost:55, dur:6,  cd:24},
-  {id:'cloak',  n:'Cloak',   d:'suspicion −1.5/s · 8s',    cost:55, dur:8,  cd:24},
-  {id:'blitz',  n:'Blitz',   d:'nodes 40% off · 5s',       cost:70, dur:5,  cd:26},
-  {id:'siphon', n:'Siphon',  d:'instant +8s of income',    cost:45, dur:0.1,cd:20},
+  {id:'worm',   n:'Worm',    d:'nodes 20% off · 10s',      cost:90,  dur:10, cd:20},
+  {id:'eff',    n:'Botnet',  d:'income +25% · 10s',        cost:110, dur:10, cd:20},
+  {id:'stealth',n:'Rootkit', d:'rapid cooldown · 8s',      cost:100, dur:8,  cd:22},
+  {id:'ghost',  n:'Ghost',   d:'trace 35% slower · 10s',   cost:180, dur:10, cd:25},
+  {id:'surge',  n:'Surge',   d:'income +55% · 6s',         cost:170, dur:6,  cd:24},
+  {id:'cloak',  n:'Cloak',   d:'suspicion −1.5/s · 8s',    cost:190, dur:8,  cd:24},
+  {id:'blitz',  n:'Blitz',   d:'nodes 40% off · 5s',       cost:210, dur:5,  cd:26},
+  {id:'siphon', n:'Siphon',  d:'instant +8s of income',    cost:130, dur:0.1,cd:20},
 ];
 const boostById=(id)=>BOOST_POOL.find(b=>b.id===id);
 const DEFAULT_LOADOUT=['worm','eff','stealth','ghost'];
