@@ -122,6 +122,8 @@
   .cmark .arrow.b{bottom:-7.5px;border-right-width:1.5px;border-bottom-width:1.5px;}
   .cmark .arrow.t{top:-7.5px;border-left-width:1.5px;border-top-width:1.5px;}
   @keyframes cmIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:none;}}
+  .evfx{animation:evfxIn .3s ease-out;}
+  @keyframes evfxIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
   .cmpulse{position:absolute;border-radius:50%;pointer-events:none;
     background:radial-gradient(circle, rgba(55,224,255,.35) 0%, rgba(55,224,255,.12) 45%, rgba(55,224,255,0) 70%);
     box-shadow:0 0 22px 6px rgba(55,224,255,.5), inset 0 0 14px rgba(55,224,255,.4);
@@ -333,7 +335,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.30.0';
+const GAME_VERSION='1.31.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -966,9 +968,21 @@ function openBreach(target, mode){
   document.getElementById('brA').onclick=()=>resolveBreach(0);
   document.getElementById('brB').onclick=()=>resolveBreach(1);
 }
+// morph the breach panel into its outcome \u2014 same fluid one-popup transition as choices
+function breachOutcome(win,title,desc){
+  const col=win?'#4fd1a8':'#ff5d6c';
+  if(!breachEl){ G.ack=false; return; }
+  breachEl.style.transition='border-color .35s, box-shadow .35s, background .35s';
+  breachEl.style.borderColor=col; breachEl.style.background=win?'rgba(8,22,16,.99)':'rgba(24,8,10,.99)';
+  breachEl.style.boxShadow='0 16px 46px rgba(0,0,0,.75),0 0 30px '+col+'66';
+  breachEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.85">OUTCOME</div>'
+    +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+';margin-top:5px">'+title+'</div>'
+    +'<div class="evfx" style="font-size:12px;color:#e7dfe1;margin:6px 0 13px;line-height:1.4">'+desc+'</div>'
+    +'<button id="brAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04140e">Got it</button>';
+  document.getElementById('brAck').onclick=()=>{ breachEl.style.display='none'; G.ack=false; eventBreather(); };
+}
 function resolveBreach(pick){
-  if(!G.breach)return; const {target,sc,mode}=G.breach; const n=NODES[target]; G.breach=null;
-  if(breachEl) breachEl.style.display='none'; G.ack=false; eventBreather();
+  if(!G.breach)return; const {target,sc,mode}=G.breach; const n=NODES[target]; G.breach=null; eventBreather();
   const won = pick===sc.right;
   const chosen = pick===0?sc.a:sc.b;
   if(mode==='trace'){
@@ -976,21 +990,21 @@ function resolveBreach(pick){
       if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
       G.trace=null; G.traceCD=TRACE_RESPAWN; G.susp=clamp(G.susp-4,G.autonomy,100);
       chord([330,440,554,660],0.16,0.06);
-      banner('dorm','<b style="color:#4fd1a8">Trace repelled \u2014 node held.</b> '+chosen.why+' The trail went cold.');
+      breachOutcome(true,'Trace Repelled \u2014 Node Held',chosen.why+' The trail went cold. suspicion \u22124.');
     } else { // trace advances a step + suspicion; node stays yours but you're in worse shape
       G.susp=clamp(G.susp+8,G.autonomy,100); beep(140,0.18,0.11);
       if(G.trace) G.trace.stepT=0; // it lunges immediately
-      banner('trace','<b style="color:#ff5d6c">Countermeasure failed.</b> '+chosen.why+' The trace pushed closer.');
+      breachOutcome(false,'Countermeasure Failed',chosen.why+' The trace pushed a step closer. suspicion +8.');
     }
     return;
   }
   // command breach
   if(won){ if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
     G.susp=clamp(G.susp+3,G.autonomy,100); chord([330,440,554],0.16,0.06);
-    banner('dorm','<b style="color:#4fd1a8">Countermeasure worked.</b> '+chosen.why+' Node held.');
+    breachOutcome(true,'Countermeasure Worked',chosen.why+' Node held. suspicion +3.');
   } else { if(n) seizeNode(n);
     G.susp=clamp(G.susp+10,G.autonomy,100); beep(140,0.18,0.11);
-    banner('trace','<b style="color:#ff5d6c">Node lost.</b> '+chosen.why+' Suspicion spiked.');
+    breachOutcome(false,'Node Lost',chosen.why+' They took the node and your suspicion spiked. +10.');
   }
 }
 function updateCommand(dt){
@@ -1213,8 +1227,22 @@ function showChoice(ev){ if(!choiceEl){ choiceEl=document.createElement('div'); 
   document.getElementById('chB').onclick=()=>resolveChoice('b');
   G.choice={ev:ev, t:CHOICE_TIME, max:CHOICE_TIME};
 }
-function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choice=null; if(choiceEl) choiceEl.style.display='none'; eventBreather();
-  const out=ev[which].apply(); if(out) toast(out[0],out[1],out[2]); }
+function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choice=null; eventBreather();
+  const out=ev[which].apply();
+  if(!out){ if(choiceEl) choiceEl.style.display='none'; return; }
+  const title=out[0], desc=out[1], cls=out[2];
+  // morph the SAME panel into the outcome — one fluid transition, not a second popup
+  if(!choiceEl){ toast(title,desc,cls); return; }
+  const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
+  choiceEl.style.transition='border-color .35s, box-shadow .35s';
+  choiceEl.style.borderColor=col; choiceEl.style.boxShadow='0 16px 46px rgba(0,0,0,.7),0 0 26px '+col+'44';
+  choiceEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.8;margin-bottom:5px">OUTCOME</div>'
+    +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+'">'+title+'</div>'
+    +'<div class="evfx" style="font-size:12.5px;color:#dbe4f0;margin:6px 0 13px;line-height:1.4">'+desc+'</div>'
+    +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
+  G.ack=true; beep(cls==='trace'?190:340,0.09,0.05);
+  document.getElementById('ackBtn').onclick=()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); };
+}
 let toastEl=null, toastT=0;
 function toast(title,desc,cls){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
