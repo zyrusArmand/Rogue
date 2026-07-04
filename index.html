@@ -116,7 +116,10 @@
   .cmark.warn{border-color:var(--red);box-shadow:0 8px 28px rgba(0,0,0,.6),0 0 18px rgba(255,93,108,.28);}
   .cmark.warn .ct b{color:var(--red);}
   .cmark.warn .cgot{background:linear-gradient(180deg,var(--red),#c0344180);color:#fff;}
-  .cmark .arrow{position:absolute;width:12px;height:12px;background:inherit;border:inherit;border-top:none;border-left:none;transform:rotate(45deg);}
+  /* speech-bubble tail pointing at the highlighted control */
+  .cmark .arrow{position:absolute;width:12px;height:12px;background:rgba(8,16,26,.97);transform:rotate(45deg);border:0 solid;border-color:inherit;}
+  .cmark .arrow.b{bottom:-7.5px;border-right-width:1.5px;border-bottom-width:1.5px;}
+  .cmark .arrow.t{top:-7.5px;border-left-width:1.5px;border-top-width:1.5px;}
   @keyframes cmIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:none;}}
   .cmpulse{position:absolute;border-radius:50%;pointer-events:none;
     background:radial-gradient(circle, rgba(55,224,255,.35) 0%, rgba(55,224,255,.12) 45%, rgba(55,224,255,0) 70%);
@@ -319,7 +322,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.23.0';
+const GAME_VERSION='1.23.1';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1423,13 +1426,20 @@ function showCoach(stepId){
   // the screen — and reserve room for the card AND the boost bar so nothing is covered
   const W=CSSW||800, H=Math.min(CSSH||400,(window.visualViewport?window.visualViewport.height:1e9)), bw=210;
   let cx, cy, side;
-  if(rect.y > H*0.45){ side='above'; cy=rect.y-rect.r-12-130; } else { side='below'; cy=rect.y+rect.r+12; }
+  const vo=rect.h?rect.h/2:rect.r;   // wide controls: hug their edge, not their half-width radius
+  if(rect.y > H*0.45){ side='above'; cy=rect.y-vo-12-130; } else { side='below'; cy=rect.y+vo+14; }
   cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-190);
   const pw=rect.w?rect.w+14:rect.r*2, ph=rect.h?rect.h+14:rect.r*2;
+  const ax=clamp(rect.x-cx-6, 10, bw-22);   // tail x within the card, aimed at the anchor
   c.innerHTML='<div class="cmpulse'+(rect.w?' rectp':'')+(step.warn?' warn':'')+'" style="left:'+(rect.x-pw/2)+'px;top:'+(rect.y-ph/2)+'px;width:'+pw+'px;height:'+ph+'px"></div>'
     +'<div class="cmark'+(step.warn?' warn':'')+'" style="left:'+cx+'px;top:'+cy+'px;width:'+bw+'px">'
+    +'<div class="arrow '+(side==='above'?'b':'t')+'" style="left:'+ax+'px"></div>'
     +'<div class="ct">'+step.text+'</div>'
     +'<button class="cgot">Got it</button></div>';
+  // snug fit: measure the real card height so its tail edge sits right against the anchor
+  { const card=c.querySelector('.cmark');
+    if(side==='above'){ card.style.top=clamp(rect.y-(rect.h?rect.h/2:rect.r)-14-card.offsetHeight, 8, H-190)+'px'; }
+    else { card.style.top=clamp(rect.y+(rect.h?rect.h/2:rect.r)+14, 8, H-190)+'px'; } }
   const gotBtn=c.querySelector('.cgot'); const card=c.querySelector('.cmark');
   const doDismiss=(e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } dismissCoach(); };
   gotBtn.onclick=doDismiss; gotBtn.addEventListener('touchend',doDismiss,{passive:false});
