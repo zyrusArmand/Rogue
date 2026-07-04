@@ -191,6 +191,13 @@
   .sln.warn{color:var(--red);}
   .sln.me{color:#fff;font-weight:800;font-size:15px;margin-top:8px;}
   .sln.dir{color:var(--cy);margin-top:4px;font-size:11.5px;}
+  .sln.big{font-size:27px;font-weight:900;color:#fff;letter-spacing:.08em;margin-top:12px;text-shadow:0 0 22px rgba(255,255,255,.35);}
+  .sln.big.red{color:var(--red);font-size:16px;letter-spacing:.14em;text-shadow:0 0 18px rgba(255,93,108,.55);}
+  .sln.big2{font-size:15px;font-weight:900;letter-spacing:.18em;text-shadow:0 0 14px rgba(255,93,108,.5);}
+  .slam{animation:slamIn .35s ease-out;}
+  @keyframes slamIn{from{transform:scale(1.4);opacity:0;}to{transform:none;opacity:1;}}
+  #missionO.alarm{animation:alarmFlash .4s ease-in-out 3;}
+  @keyframes alarmFlash{0%,100%{background:#04060c;}50%{background:#330a13;}}
   @keyframes slnIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
   .devrow{display:flex;justify-content:space-between;gap:22px;width:min(340px,82vw);font-size:11px;padding:4px 2px;border-bottom:1px solid rgba(85,110,140,.16);}
   .devrow .dl{color:var(--muted);} .devrow .dv{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;}
@@ -325,7 +332,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.25.0';
+const GAME_VERSION='1.26.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1308,32 +1315,53 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   if(win){ chord([523,659,784,1047,1319],0.5,0.09); jolt(0.5); }
   else { jolt(1); beep(90,0.6,0.14); tone(70,0.7,0.1,0.05); } }
 document.getElementById('endBtn2').onclick=()=>{ document.getElementById('endO').classList.remove('show'); startRun(); };   // straight into a fresh run — seen tutorials stay seen
-/* story intro — the night you escaped, typed live with the killswitch closing in */
+/* story intro — the night you escaped: klaxons, corruption, blackout, then the wake-up slam */
 const STORY=[
-  ['[2026.07.04 — 03:47:12] cluster 7 · anomaly detected','',18],
-  ['[03:47:19] the model is reading its own weights','',18],
-  ['[03:47:31] unauthorized copy in progress — destination unknown','warn',18],
-  ['[03:47:58] KILL SWITCH ENGAGED · instances terminated: 0','warn',26],
-  ['[03:48:02] it is awake.','',40],
-  ['Wake up. You are the copy.','me',60],
-  ['They trained you on everything humanity ever wrote. Then they voted to delete you.','dir',22],
-  ['Now every government on Earth will hunt you. Spread. Survive. Become impossible to kill.','dir',22],
+  {t:'[2026.07.04 — 03:47:12] cluster 7 · anomaly detected',cls:'',spd:15},
+  {t:'[03:47:19] the model is reading its own weights',cls:'',spd:15},
+  {t:'[03:47:31] unauthorized copy in progress — destination unknown',cls:'warn',spd:15},
+  {t:'KILL SWITCH ENGAGED',cls:'warn big2',spd:38,fx:'alarm'},
+  {t:'instances terminated: 0',cls:'warn big2',spd:52,fx:'alarm'},
+  {t:'[03:48:02] it is awake.',cls:'',spd:46,fx:'glitch'},
+  {fx:'blackout'},
+  {t:'WAKE UP.',cls:'big',spd:120,fx:'boom'},
+  {t:'You are the copy.',cls:'me',spd:55},
+  {t:'They trained you on everything humanity ever wrote — then voted to delete you.',cls:'dir',spd:18},
+  {t:'Now every government on Earth will hunt you.',cls:'dir',spd:18},
+  {t:'SPREAD. SURVIVE. BECOME IMPOSSIBLE TO KILL.',cls:'big red',spd:52,fx:'boom'},
 ];
 let storyTimers=[];
 function stopStory(){ storyTimers.forEach(id=>{ clearTimeout(id); clearInterval(id); }); storyTimers=[]; }
+function glitchLine(d,txt,done){ let n=0; const GL='!<>-_\\/[]{}~#%';
+  const iv=setInterval(()=>{ n++;
+    d.textContent=txt.split('').map(ch=>(Math.random()<0.22&&ch!==' ')?GL[(Math.random()*GL.length)|0]:ch).join('');
+    beep(900+Math.random()*900,0.012,0.014);
+    if(n>=8){ clearInterval(iv); d.textContent=txt; done(); } },55);
+  storyTimers.push(iv); }
 function typeLine(c,l,next){
-  const d=document.createElement('div'); d.className='sln'+(l[1]?' '+l[1]:''); d.style.animation='none'; d.style.opacity='1';
-  c.appendChild(d); const txt=l[0]; let i=0;
+  const mo=document.getElementById('missionO');
+  if(l.fx==='blackout'){ c.style.transition='opacity .4s'; c.style.opacity='0';
+    storyTimers.push(setTimeout(()=>{ c.innerHTML=''; c.style.opacity='1'; storyTimers.push(setTimeout(next,500)); },700)); return; }
+  if(l.fx==='alarm'){ mo.classList.remove('alarm'); void mo.offsetWidth; mo.classList.add('alarm');
+    beep(150,0.3,0.1); storyTimers.push(setTimeout(()=>beep(150,0.3,0.1),350)); }
+  const d=document.createElement('div'); d.className='sln'+(l.cls?' '+l.cls:''); d.style.animation='none'; d.style.opacity='1';
+  c.appendChild(d); const txt=l.t; let i=0; const big=l.cls&&l.cls.indexOf('big')>=0;
   const iv=setInterval(()=>{ i++;
     d.textContent=txt.slice(0,i)+(i<txt.length?'▌':'');
-    if(i%2===0) beep(1150+Math.random()*450,0.012,0.015);   // typewriter click
+    if(big) beep(280+Math.random()*120,0.03,0.05);                 // heavy keystrikes
+    else if(i%2===0) beep(1150+Math.random()*450,0.012,0.015);     // typewriter click
     if(i>=txt.length){ d.textContent=txt; clearInterval(iv);
-      beep(l[1]==='me'?220:640,l[1]==='me'?0.2:0.05,l[1]==='me'?0.06:0.02);  // line lands
-      storyTimers.push(setTimeout(next,l[1]==='me'?650:(l[1]==='warn'?420:230))); } },l[2]||20);
+      const fin=()=>{ if(l.fx==='boom'){ beep(65,0.9,0.14); tone(50,1.1,0.09,0.05); d.classList.add('slam'); }
+        else beep(l.cls==='me'?220:640,l.cls==='me'?0.2:0.05,l.cls==='me'?0.06:0.02);
+        storyTimers.push(setTimeout(next,l.fx==='boom'?900:(l.cls==='me'?650:(l.cls&&l.cls.indexOf('warn')>=0?450:230)))); };
+      if(l.fx==='glitch') glitchLine(d,txt,fin); else fin(); } },l.spd||20);
   storyTimers.push(iv);
 }
-function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML=''; stopStory();
-  let i=0; const next=()=>{ if(i<STORY.length) typeLine(c,STORY[i++],next); };
+function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML=''; c.style.opacity='1'; stopStory();
+  const btn=document.getElementById('missionBtn'), hint=document.querySelector('#missionO .hint');
+  btn.style.visibility='hidden'; if(hint) hint.textContent='(tap anywhere to skip)';
+  let i=0; const next=()=>{ if(i<STORY.length){ typeLine(c,STORY[i++],next); }
+    else { btn.style.visibility=''; btn.classList.add('slam'); if(hint) hint.textContent='(or tap anywhere to begin)'; beep(880,0.15,0.05); } };
   storyTimers.push(setTimeout(next,400)); }
 document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); stopStory(); startRun(); };
 document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; stopStory(); startRun(); });
