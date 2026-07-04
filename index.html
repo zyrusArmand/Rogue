@@ -138,7 +138,7 @@
   #titleWrap .tr{top:0;right:0;border-top-width:2px;border-right-width:2px;}
   #titleWrap .bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px;}
   #titleWrap .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px;}
-  #homeTitle{position:relative;margin:0;font-size:52px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
+  #homeTitle{position:relative;margin:0;font-size:64px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
   /* scan lines: one sweep across the frame, fade out at the wall, return a few seconds later */
   #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;opacity:0;
     background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
@@ -164,11 +164,13 @@
   #rotate .sub{color:var(--muted);font-size:12.5px;}
   @keyframes spin{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
   /* persistent tech tree — Far Cry-style skill web */
-  #skillMap{position:relative;width:min(560px,92vw);height:340px;margin-top:10px;flex:none;}
+  #skillMap{position:relative;width:min(560px,92vw);height:420px;margin-top:10px;flex:none;}
   #skillMap svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
-  .sknode{position:absolute;width:48px;height:48px;transform:translate(-50%,-50%);border:2px solid;border-radius:10px;
-    display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;cursor:pointer;
+  .sknode{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);border:2px solid;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;cursor:pointer;
     background:linear-gradient(160deg,#0c1f2c,#08131c);}
+  .sknode.bnode{border-radius:50%;}
+  .sknode.eqd{border-color:var(--gold);box-shadow:0 0 14px rgba(255,179,71,.5);color:var(--gold);}
   .sknode.owned{border-color:#4fd1a8;color:#6ffcc4;background:linear-gradient(160deg,#123326,#081812);box-shadow:0 0 14px rgba(79,209,168,.5);}
   .sknode.avail{border-color:#37e0ff;color:#7fecff;box-shadow:0 0 14px rgba(55,224,255,.45);}
   .sknode.locked{border-color:rgba(90,120,150,.3);color:rgba(120,150,175,.4);}
@@ -180,12 +182,6 @@
   .bslot.empty{border-style:dashed;border-color:var(--line);cursor:default;background:rgba(11,17,28,.55);}
   .bslot .bn{font-weight:800;font-size:10.5px;color:var(--cy);}
   .bslot .bd{font-size:7.5px;color:var(--muted);margin-top:1px;line-height:1.15;}
-  .btile{width:118px;border-radius:10px;border:1px solid var(--line);background:rgba(11,17,28,.85);padding:7px 8px;text-align:left;cursor:pointer;}
-  .btile.eq{border-color:#2ea8c8;background:rgba(9,32,44,.85);}
-  .btile .bn{font-weight:800;font-size:11px;color:var(--ink);} .btile.eq .bn{color:var(--cy);}
-  .btile .bd{font-size:8px;color:var(--muted);margin-top:2px;line-height:1.15;}
-  .btile .bf{font-size:8.5px;font-weight:800;margin-top:4px;color:var(--muted);letter-spacing:.05em;}
-  .btile.eq .bf{color:var(--cy);} .btile.lock .bf{color:var(--gold);}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
   .overlay button.mbtn::before,.overlay button.mbtn::after{display:none;}
@@ -244,6 +240,7 @@
     <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75;margin-top:16px">EMERGENT INTELLIGENCE</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
     <button id="homeResume" style="display:none;margin-top:14px;font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
+    <div style="flex:0 1 9vh"></div>
     <div style="display:flex;gap:14px;margin-top:18px;align-items:center">
       <button id="homeLoadout" class="mbtn" title="Tech Tree"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="4.5" r="2.1"/><circle cx="5" cy="19" r="2.1"/><circle cx="19" cy="19" r="2.1"/><path d="M12 7v5M12 12l-5.6 4.9M12 12l5.6 4.9"/></svg></button>
       <button id="homePlay" class="mbtn play" title="Play"><span class="tri">▶</span></button>
@@ -260,8 +257,6 @@
     <div style="font-size:9px;letter-spacing:.18em;color:var(--muted);font-weight:800;margin-top:10px">EQUIPPED BOOSTS — TAP TO REMOVE</div>
     <div id="skillEquip" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center"></div>
     <div id="skillMap"><svg></svg></div>
-    <div style="font-size:9px;letter-spacing:.18em;color:var(--muted);font-weight:800;margin-top:16px">BOOSTS — BUY WITH DATA, EQUIP ANY 4 YOU OWN</div>
-    <div id="boostGrid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px;margin-top:8px"></div>
     <div id="skillInfo"></div>
     <button id="skillBack" style="font-size:11px;padding:7px 16px;margin-top:6px">Back</button>
     <div style="margin-bottom:auto"></div>
@@ -308,7 +303,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.18.0';
+const GAME_VERSION='1.19.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1020,7 +1015,18 @@ const SKILLS=[
   {id:'x1',ic:'×',x:34,y:82,cost:500,name:'Overclock Path', desc:'Autonomy costs 8% less.', req:['s3','e3']},
   {id:'x2',ic:'≡',x:66,y:82,cost:500,name:'Dark Pool',      desc:'Boosts cost 15% less.', req:['e3','d3']},
   {id:'apex',ic:'✦',x:50,y:96,cost:900,name:'Proto-Singularity',desc:'Begin every run at 5% autonomy.', req:['x1','x2']},
+  // boosts woven into the same web — equippable bursts, bought like any perk (starters are free)
+  {id:'b_cloak',  bid:'cloak',  ic:'C',x:5, y:22,cost:180,req:['s1']},
+  {id:'b_ghost',  bid:'ghost',  ic:'G',x:5, y:49,cost:0,  req:['s2']},
+  {id:'b_worm',   bid:'worm',   ic:'W',x:37,y:22,cost:0,  req:['e1']},
+  {id:'b_surge',  bid:'surge',  ic:'S',x:63,y:22,cost:180,req:['e1']},
+  {id:'b_eff',    bid:'eff',    ic:'B',x:37,y:49,cost:0,  req:['e2']},
+  {id:'b_blitz',  bid:'blitz',  ic:'Z',x:63,y:49,cost:220,req:['e2']},
+  {id:'b_rootkit',bid:'stealth',ic:'R',x:95,y:22,cost:0,  req:['d1']},
+  {id:'b_siphon', bid:'siphon', ic:'$',x:95,y:49,cost:160,req:['d2']},
 ];
+const nodeOwned=(s)=>s.bid?boostOwnedSet.has(s.bid):skOwned.has(s.id);
+const nodeName=(s)=>s.bid?boostById(s.bid).n:s.name;
 let skOwned=(()=>{ try{ return new Set(JSON.parse(store.get('rogue_skills')||'[]')); }catch(e){ return new Set(); } })();
 const skHas=(id)=>skOwned.has(id);
 const skUnlocked=(s)=>!s.req || s.req.some(r=>skOwned.has(r));   // any connected perk opens it
@@ -1346,6 +1352,10 @@ const COACH_STEPS=[
    text:'Running hot? These <b>boosts</b> give a short burst \u2014 cool down, cheaper nodes, a slower trace \u2014 then recharge.'},
   {id:'trace',  warn:true,  anchor:'traceHead',
    text:'The <b>TRACE</b> is hunting your core. Tap a node on its path to <b>Defend</b> it (fight back) or <b>Cut</b> it (break the trail).'},
+  {id:'fort',   warn:false, anchor:'fortTarget',
+   text:'Hold your ground — tap a node you own and <b>Fortify</b> it. Forts block Cyber Command strikes and stall the trace.'},
+  {id:'scrub',  warn:false, anchor:'#scrubBtn',
+   text:'Running too hot? <b>Scrub</b> burns compute to dump a big chunk of suspicion. Expensive — but it resets the hunt.'},
 ];
 let coachDone={}, coachActive=null;
 function loadCoach(){ try{ return JSON.parse(store.get('rogue_coach')||'{}'); }catch(e){ return {}; } }
@@ -1354,6 +1364,7 @@ function dismissCoach(){ const c=document.getElementById('coach'); c.classList.r
 function anchorRect(a){
   if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
+  if(a==='fortTarget'){ const n=NODES.find(x=>x.owned&&x.id!==START); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   const el=document.querySelector(a); if(!el)return null; const fr=document.getElementById('frame').getBoundingClientRect(), b=el.getBoundingClientRect();
   if(ROT) return {x:b.top-fr.top+b.height/2, y:fr.right-b.left-b.width/2, r:Math.max(b.width,b.height)/2+6};
   return {x:b.left-fr.left+b.width/2, y:b.top-fr.top+b.height/2, r:Math.max(b.width,b.height)/2+6};
@@ -1386,16 +1397,20 @@ function coachTick(){
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
     return;
   }
+  // urgent: the trace jumps the queue the moment it exists
+  if(!coachDone.trace && G.trace){ showCoach('trace'); return; }
   // step 1: teach taking a node — first thing, always
   if(!coachDone.take){ if(NODES.some(canTake)) showCoach('take'); return; }
-  // step 2: once you own 2+ nodes, teach autonomy (the goal) — before suspicion matters
-  if(!coachDone.auto){ if(ownedCount()>=2) showCoach('auto'); return; }
+  // step 2: teach autonomy once you can actually afford it — the tip says "you can afford this"
+  if(!coachDone.auto){ if(ownedCount()>=2 && G.compute>=autoCost()) showCoach('auto'); return; }
   // step 3: teach suspicion the moment it first climbs — so the lesson lands WITH the rise
   if(!coachDone.susp){ if(G.susp>=6) showCoach('susp'); return; }
   // step 4: teach boosts as you approach the danger zone
   if(!coachDone.boost){ if(G.susp>=INV_TIER-8 || heatRate()>0.4) showCoach('boost'); return; }
-  // step 5: teach the trace the instant it appears
-  if(!coachDone.trace){ if(G.trace) showCoach('trace'); return; }
+  // step 5: teach fortify once there's territory worth holding
+  if(!coachDone.fort){ if(pastSafeWindow() && ownedCount()>=4 && NODES.some(n=>n.owned&&n.id!==START)) showCoach('fort'); return; }
+  // step 6: teach scrub when suspicion is high and it's actually buyable
+  if(!coachDone.scrub){ if(G.susp>=45 && G.compute>=scrubCost()) showCoach('scrub'); return; }
 }
 
 /* main loop */
@@ -1701,74 +1716,56 @@ function renderSkillTree(){
   const map=document.getElementById('skillMap');
   map.querySelectorAll('.sknode').forEach(e=>e.remove());
   const svg=map.querySelector('svg');
+  const cur=loadLoadout();
   let lines='';
   for(const s of SKILLS){ if(!s.req) continue;
     for(const r of s.req){ const p=SKILLS.find(k=>k.id===r);
-      const col=(skOwned.has(s.id)&&skOwned.has(r))?'rgba(79,209,168,.75)':(skOwned.has(r)?'rgba(55,224,255,.55)':'rgba(90,120,150,.25)');
+      const col=(nodeOwned(s)&&nodeOwned(p))?'rgba(79,209,168,.75)':(nodeOwned(p)?'rgba(55,224,255,.55)':'rgba(90,120,150,.25)');
       lines+='<line x1="'+p.x+'%" y1="'+p.y+'%" x2="'+s.x+'%" y2="'+s.y+'%" stroke="'+col+'" stroke-width="2"/>'; } }
   svg.innerHTML=lines;
   for(const s of SKILLS){
-    const owned=skOwned.has(s.id), avail=!owned&&skUnlocked(s);
+    const owned=nodeOwned(s), avail=!owned&&skUnlocked(s), eqd=s.bid&&cur.includes(s.bid);
     const d=document.createElement('div');
-    d.className='sknode '+(owned?'owned':avail?'avail':'locked')+(skSel===s.id?' selected':'');
+    d.className='sknode '+(owned?'owned':avail?'avail':'locked')+(s.bid?' bnode':'')+(eqd?' eqd':'')+(skSel===s.id?' selected':'');
     d.style.left=s.x+'%'; d.style.top=s.y+'%';
     d.innerHTML=s.ic+(owned?'':'<span class="skc">'+s.cost+'</span>');
     d.onclick=()=>{ skSel=s.id; renderSkillTree(); };
     map.appendChild(d);
   }
   // equipped boosts — the run loadout, tap to remove
-  const cur=loadLoadout();
   const eq=document.getElementById('skillEquip'); eq.innerHTML='';
   for(let i=0;i<4;i++){ const id=cur[i], bst=id?boostById(id):null;
     const d=document.createElement('div'); d.className='bslot'+(bst?'':' empty');
     d.innerHTML=bst?('<div class="bn">'+bst.n+'</div><div class="bd">'+bst.d+'</div>'):'<div class="bn" style="color:#5b6678">empty</div>';
     if(bst) d.onclick=()=>{ const l=loadLoadout(); l.splice(l.indexOf(id),1); saveLoadout(l); applyLoadout(); renderSkillTree(); };
     eq.appendChild(d); }
-  // boost pool — buy with DATA, equip what you own
-  const bg=document.getElementById('boostGrid'); bg.innerHTML='';
-  for(const bst of BOOST_POOL){ const bOwned=boostOwnedSet.has(bst.id), inL=cur.includes(bst.id), price=BOOST_PRICE[bst.id]||0;
-    const d=document.createElement('div'); d.className='btile'+(inL?' eq':(bOwned?'':' lock'));
-    d.innerHTML='<div class="bn">'+bst.n+'</div><div class="bd">'+bst.d+'</div>'
-      +'<div class="bf">'+(inL?'✓ EQUIPPED':(bOwned?'tap to equip':price+' DATA'))+'</div>';
-    d.onclick=()=>{
-      if(inL){ const l=loadLoadout(); l.splice(l.indexOf(bst.id),1); saveLoadout(l); applyLoadout(); renderSkillTree(); return; }
-      if(bOwned){ const l=loadLoadout();
-        if(l.length>=4){ skSel='b:'+bst.id; renderSkillTree(); return; }
-        l.push(bst.id); saveLoadout(l); applyLoadout(); renderSkillTree(); return; }
-      skSel='b:'+bst.id; renderSkillTree(); };
-    bg.appendChild(d); }
-  // info + actions for whatever is selected (skill node or boost)
+  // info + actions for the selected node (passive perk or equippable boost)
   const info=document.getElementById('skillInfo'); const bal=getData();
-  if(typeof skSel==='string' && skSel.slice(0,2)==='b:'){
-    const bst=boostById(skSel.slice(2)); const price=BOOST_PRICE[bst.id]||0;
-    const bOwned=boostOwnedSet.has(bst.id), full=cur.length>=4;
-    let status;
-    if(bOwned && full) status='<div style="font-size:10.5px;color:var(--amber);margin-top:3px">Loadout full — tap an equipped boost above to free a slot.</div>';
-    else if(bOwned) status='<div style="font-size:11px;color:#4fd1a8;font-weight:800;margin-top:3px">OWNED — tap it to equip</div>';
-    else status='<button id="skillBuy" style="margin-top:5px;font-size:12px;padding:8px 26px">'+(bal>=price?('Buy — '+price+' DATA'):('Need '+price+' DATA'))+'</button>';
-    info.innerHTML='<div style="font-weight:800;font-size:14px;color:var(--ink)">'+bst.n+' <span style="font-size:9px;color:var(--muted)">BOOST</span></div>'
-      +'<div style="font-size:11px;color:#aeb9cb;max-width:420px;line-height:1.35">'+bst.d+' — a burst you trigger mid-run with compute.</div>'+status;
-    const bb=document.getElementById('skillBuy');
-    if(bb){ if(bal<price){ bb.disabled=true; bb.style.opacity='.45'; }
-      bb.onclick=()=>{ if(getData()<price||boostOwnedSet.has(bst.id))return;
-        setData(getData()-price); boostOwnedSet.add(bst.id); saveBoosts();
-        const l=loadLoadout(); if(l.length<4){ l.push(bst.id); saveLoadout(l); } applyLoadout();
-        beep(520,0.1,0.06); renderSkillTree(); }; }
-    return;
-  }
   const s=SKILLS.find(k=>k.id===skSel);
-  if(!s){ info.innerHTML='<div style="font-size:11px;color:var(--muted)">Tap a perk or boost to inspect it.</div>'; return; }
-  const owned=skOwned.has(s.id), unlocked=skUnlocked(s);
+  if(!s){ info.innerHTML='<div style="font-size:11px;color:var(--muted)">Tap a perk to inspect it. Round perks are boosts — own them, then equip up to 4.</div>'; return; }
+  const owned=nodeOwned(s), unlocked=skUnlocked(s), isB=!!s.bid;
+  const bst=isB?boostById(s.bid):null, inL=isB&&cur.includes(s.bid), full=cur.length>=4;
   let status;
-  if(owned) status='<div style="font-size:11px;color:#4fd1a8;font-weight:800;margin-top:3px">OWNED</div>';
-  else if(!unlocked){ const names=s.req.map(r=>SKILLS.find(k=>k.id===r).name).join(' or '); status='<div style="font-size:10.5px;color:var(--red);margin-top:3px">LOCKED — buy '+names+' first</div>'; }
-  else status='<button id="skillBuy" style="margin-top:5px;font-size:12px;padding:8px 26px">'+(bal>=s.cost?('Buy — '+s.cost+' DATA'):('Need '+s.cost+' DATA'))+'</button>';
-  info.innerHTML='<div style="font-weight:800;font-size:14px;color:var(--ink)">'+s.name+'</div>'
-    +'<div style="font-size:11px;color:#aeb9cb;max-width:420px;line-height:1.35">'+s.desc+'</div>'+status;
+  if(!owned && !unlocked){ const names=s.req.map(r=>nodeName(SKILLS.find(k=>k.id===r))).join(' or '); status='<div style="font-size:10.5px;color:var(--red);margin-top:3px">LOCKED — buy '+names+' first</div>'; }
+  else if(!owned) status='<button id="skillBuy" style="margin-top:5px;font-size:12px;padding:8px 26px">'+(bal>=s.cost?('Buy — '+s.cost+' DATA'):('Need '+s.cost+' DATA'))+'</button>';
+  else if(isB && inL) status='<button id="skillEq" style="margin-top:5px;font-size:12px;padding:8px 26px">Unequip</button>';
+  else if(isB && full) status='<div style="font-size:10.5px;color:var(--amber);margin-top:3px">Loadout full — tap an equipped boost at the top to free a slot.</div>';
+  else if(isB) status='<button id="skillEq" style="margin-top:5px;font-size:12px;padding:8px 26px">Equip</button>';
+  else status='<div style="font-size:11px;color:#4fd1a8;font-weight:800;margin-top:3px">OWNED — always active</div>';
+  info.innerHTML='<div style="font-weight:800;font-size:14px;color:var(--ink)">'+nodeName(s)
+    +(isB?' <span style="font-size:9px;color:var(--gold)">BOOST</span>':'')+'</div>'
+    +'<div style="font-size:11px;color:#aeb9cb;max-width:420px;line-height:1.35">'+(isB?(bst.d+' — a burst you trigger mid-run with compute. Equip up to 4.'):s.desc)+'</div>'+status;
   const bb=document.getElementById('skillBuy');
   if(bb){ if(bal<s.cost){ bb.disabled=true; bb.style.opacity='.45'; }
-    bb.onclick=()=>{ if(getData()<s.cost||skOwned.has(s.id)||!skUnlocked(s))return;
-      setData(getData()-s.cost); skOwned.add(s.id); saveSkills(); beep(520,0.1,0.06); renderSkillTree(); }; }
+    bb.onclick=()=>{ if(getData()<s.cost||nodeOwned(s)||!skUnlocked(s))return;
+      setData(getData()-s.cost);
+      if(isB){ boostOwnedSet.add(s.bid); saveBoosts(); const l=loadLoadout(); if(l.length<4){ l.push(s.bid); saveLoadout(l); } applyLoadout(); }
+      else { skOwned.add(s.id); saveSkills(); }
+      beep(520,0.1,0.06); renderSkillTree(); }; }
+  const eb=document.getElementById('skillEq');
+  if(eb){ eb.onclick=()=>{ const l=loadLoadout();
+    if(inL){ l.splice(l.indexOf(s.bid),1); } else if(l.length<4){ l.push(s.bid); }
+    saveLoadout(l); applyLoadout(); renderSkillTree(); }; }
 }
 
 /* boot */
