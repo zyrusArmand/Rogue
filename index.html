@@ -49,7 +49,16 @@
   .up.cant{opacity:.5;}
   .up.active{border-color:#2ea8c8;background:rgba(9,32,44,.96);box-shadow:0 0 9px rgba(55,224,255,.22);cursor:default;}
   .up.cd{opacity:.55;cursor:default;}
-  .up .un{font-size:10px;font-weight:700;line-height:1;}
+  .up .un{font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;gap:4px;}
+  .upq{flex:none;width:12px;height:12px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);
+    font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+  .upq:active,.upq.on{color:var(--cy);border-color:var(--cy);}
+  #boostInfo{position:absolute;z-index:16;width:min(230px,72vw);padding:9px 11px;border:1px solid var(--cy);border-radius:12px;
+    background:rgba(6,14,22,.98);box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 16px rgba(46,230,255,.15);display:none;text-align:left;
+    animation:cmIn .2s ease;}
+  #boostInfo .bt{font-weight:800;color:var(--cy);font-size:12.5px;margin-bottom:3px;}
+  #boostInfo .bd{font-size:11px;color:#dbe4f0;line-height:1.4;}
+  #boostInfo .bm{color:var(--muted);font-size:9px;margin-top:6px;letter-spacing:.05em;font-variant-numeric:tabular-nums;}
   .up .uc{font-size:9.5px;color:var(--cy);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
   .up .uc.no{color:#5b6678;} .up .uc.owned{color:var(--grn);}
   #botactions{display:flex;gap:8px;flex:none;}
@@ -335,7 +344,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.32.0';
+const GAME_VERSION='1.33.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -632,14 +641,14 @@ let START=0; const UNLOCK=3;
    BOOST_POOL is the full roster; the player picks 4 into their LOADOUT on the home screen.
    All are balanced to be different, not stronger — variety, not power. */
 const BOOST_POOL=[
-  {id:'worm',   n:'Worm',    d:'nodes 20% off · 10s',      cost:90,  dur:10, cd:20},
-  {id:'eff',    n:'Botnet',  d:'income +25% · 10s',        cost:110, dur:10, cd:20},
-  {id:'stealth',n:'Rootkit', d:'rapid cooldown · 8s',      cost:100, dur:8,  cd:22},
-  {id:'ghost',  n:'Ghost',   d:'trace 35% slower · 10s',   cost:180, dur:10, cd:25},
-  {id:'surge',  n:'Surge',   d:'income +55% · 6s',         cost:170, dur:6,  cd:24},
-  {id:'cloak',  n:'Cloak',   d:'suspicion −1.5/s · 8s',    cost:190, dur:8,  cd:24},
-  {id:'blitz',  n:'Blitz',   d:'nodes 40% off · 5s',       cost:210, dur:5,  cd:26},
-  {id:'siphon', n:'Siphon',  d:'instant +8s of income',    cost:130, dur:0.1,cd:20},
+  {id:'worm',   n:'Worm',    d:'nodes 20% off · 10s',      cost:90,  dur:10, cd:20, info:'Cuts the cost of taking new nodes by 20% for 10 seconds. Line up a buying spree, then fire it.'},
+  {id:'eff',    n:'Botnet',  d:'income +25% · 10s',        cost:110, dur:10, cd:20, info:'Raises all node income by 25% for 10 seconds. Pays off most when you already hold a lot of ground.'},
+  {id:'stealth',n:'Rootkit', d:'rapid cooldown · 8s',      cost:100, dur:8,  cd:22, info:'Slashes your boost cooldowns for 8 seconds so you can chain your other boosts back-to-back.'},
+  {id:'ghost',  n:'Ghost',   d:'trace 35% slower · 10s',   cost:180, dur:10, cd:25, info:'Slows the TRACE by 35% for 10 seconds — buys time to cut its path or fortify a node ahead of it.'},
+  {id:'surge',  n:'Surge',   d:'income +55% · 6s',         cost:170, dur:6,  cd:24, info:'A hard +55% income spike for 6 seconds. Short, sharp cash injection when you need compute fast.'},
+  {id:'cloak',  n:'Cloak',   d:'suspicion −1.5/s · 8s',    cost:190, dur:8,  cd:24, info:'Bleeds suspicion down 1.5 per second for 8 seconds. Your emergency cool-down when you run hot.'},
+  {id:'blitz',  n:'Blitz',   d:'nodes 40% off · 5s',       cost:210, dur:5,  cd:26, info:'Nodes 40% off for 5 seconds. Grab a whole cluster fast before the window closes.'},
+  {id:'siphon', n:'Siphon',  d:'instant +8s of income',    cost:130, dur:0.1,cd:20, info:'Instantly banks 8 seconds of income as a lump of compute. No waiting, no duration.'},
 ];
 const boostById=(id)=>BOOST_POOL.find(b=>b.id===id);
 const DEFAULT_LOADOUT=['worm','eff','stealth','ghost'];
@@ -1341,9 +1350,26 @@ function renderUps(){ const wrap=document.getElementById('ups'); wrap.innerHTML=
   UPS.forEach(u=>{ const b=G.boost[u.id], c=upCost(u), act=b.t>0, cd=b.cd>0, af=G.compute>=c;
     const d=document.createElement('div'); d.className='up'+(act?' active':(cd?' cd':(af?'':' cant')));
     const tag= act?('ON '+Math.ceil(b.t)+'s') : (cd?('cd '+Math.ceil(b.cd)+'s') : (''+c));
-    d.title=u.d;
-    d.innerHTML=`<div class="un">${u.n}</div><div class="uc ${act?'owned':((cd||!af)?'no':'')}">${tag}</div>`;
-    if(!act&&!cd)d.onclick=()=>activateBoost(u); wrap.appendChild(d); }); }
+    d.innerHTML=`<div class="un"><span class="upq${boostInfoFor===u.id?' on':''}">?</span>${u.n}</div><div class="uc ${act?'owned':((cd||!af)?'no':'')}">${tag}</div>`;
+    const q=d.querySelector('.upq'); q.onpointerdown=(e)=>{ e.stopPropagation(); e.preventDefault(); toggleBoostInfo(u,d); };
+    if(!act&&!cd)d.onclick=()=>{ boostInfoHide(); activateBoost(u); }; wrap.appendChild(d); }); }
+/* per-boost info bubble — the ? button opens an explanation above the tile; tap ? again or tap out to close */
+let boostInfoEl=null, boostInfoFor=null;
+function boostInfoHide(){ if(boostInfoEl) boostInfoEl.style.display='none'; if(boostInfoFor!=null){ boostInfoFor=null; renderUps(); } }
+function toggleBoostInfo(u,tile){
+  if(boostInfoFor===u.id){ boostInfoHide(); return; }
+  if(!boostInfoEl){ boostInfoEl=document.createElement('div'); boostInfoEl.id='boostInfo'; document.getElementById('frame').appendChild(boostInfoEl); }
+  boostInfoEl.innerHTML='<div class="bt">'+u.n+'</div><div class="bd">'+(u.info||u.d)+'</div>'
+    +'<div class="bm">cost '+upCost(u)+' · cooldown '+u.cd+'s'+(u.dur>=1?' · lasts '+u.dur+'s':'')+'</div>';
+  boostInfoEl.style.display='block';
+  const fr=document.getElementById('frame').getBoundingClientRect(), tb=tile.getBoundingClientRect(), w=boostInfoEl.offsetWidth;
+  let left=tb.left-fr.left+tb.width/2-w/2; left=Math.max(8,Math.min(left,fr.width-w-8));
+  boostInfoEl.style.left=left+'px'; boostInfoEl.style.top=(tb.top-fr.top-boostInfoEl.offsetHeight-9)+'px';
+  boostInfoFor=u.id; renderUps();
+}
+/* tap anywhere that isn't the bubble or a ? closes it */
+document.addEventListener('pointerdown',(e)=>{ if(boostInfoFor==null) return;
+  if(e.target.closest&&(e.target.closest('#boostInfo')||e.target.closest('.upq'))) return; boostInfoHide(); },true);
 
 function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   const pk=Math.round(win?100:Math.max(G.peakAuto,G.autonomy)), cc=G.closeCalls||0, secs=Math.round((performance.now()-G.runStart)/1000);
