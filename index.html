@@ -333,7 +333,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.28.0';
+const GAME_VERSION='1.29.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -610,13 +610,18 @@ const LABELS=[["CANADA",-95,61],["USA",-96,33],["BRAZIL",-47,-10],["ARGENTINA",-
 const OCEAN_LABELS=[["NORTH PACIFIC",-150,6],["SOUTH PACIFIC",-116,-34],["NORTH ATLANTIC",-45,22],["INDIAN OCEAN",86,-33]];
 /* nodes: [lon, lat, type, continentIndex] */
 const NODEDEF=[
- [-148,62,'relay',0],[-122,49,'server',0],[-110,38,'relay',0],[-105,56,'relay',0],[-87,40,'server',0],[-82.7,28.5,'fin',0],[-72,45,'relay',0],[-98,44,'hub',0],[-103,23,'relay',0],
- [-70,-12,'relay',1],[-55,-6,'server',1],[-44.9,-20.4,'fin',1],[-72,-40,'relay',1],[-63,-30,'relay',1],[-58,-20,'hub',1],[-70,6,'relay',1],
- [-6,42,'relay',2],[9,51,'server',2],[28,48,'fin',2],[14,64,'relay',2],[18,44,'hub',2],[-3,53,'relay',2],[33,60,'relay',2],
- [-8,14,'relay',3],[12,8,'server',3],[30,26,'relay',3],[42,8,'fin',3],[15,-9,'relay',3],[28,-28,'server',3],[47,-19,'relay',3],[24,-2,'hub',3],[2,33,'relay',3],
- [44,32,'relay',4],[58,44,'relay',4],[72,22,'server',4],[80,40,'relay',4],[90,26,'relay',4],[102,14,'fin',4],[112,32,'server',4],[127,38.5,'relay',4],[137,37,'server',4],[132,56,'relay',4],[96,62,'relay',4],[66,56,'relay',4],[104,48,'hub',4],
- [116,-24,'relay',5],[145,-22,'server',5],[150,-35,'fin',5],[172,-42,'relay',5],[121,-2,'relay',5],[131,-28,'hub',5],[143,-6,'relay',5],
- [-35,46,'relay',0],[-150,22,'relay',0],[-25,2,'relay',1],[78,-14,'relay',5],
+ // N. America (0)
+ [-150,64,'relay',0],[-122,50,'server',0],[-114,38,'relay',0],[-100,55,'relay',0],[-88,43,'server',0],[-81,28,'fin',0],[-70,45,'relay',0],[-98,40,'hub',0],[-107,23,'relay',0],[-135,27,'relay',0],[-60,48,'relay',0],[-90,32,'relay',0],
+ // S. America (1)
+ [-70,-10,'relay',1],[-54,-4,'server',1],[-45,-22,'fin',1],[-71,-38,'relay',1],[-63,-29,'relay',1],[-60,-15,'hub',1],[-73,5,'relay',1],[-48,-12,'relay',1],[-67,-48,'server',1],
+ // Europe (2)
+ [-6,40,'relay',2],[3,49,'server',2],[16,45,'relay',2],[10,61,'relay',2],[27,51,'fin',2],[-3,55,'relay',2],[37,59,'relay',2],[22,42,'hub',2],[43,50,'relay',2],[9,54,'server',2],
+ // Africa (3)
+ [-9,14,'relay',3],[10,6,'server',3],[31,24,'relay',3],[43,10,'fin',3],[16,-8,'relay',3],[28,-29,'server',3],[47,-19,'relay',3],[24,0,'hub',3],[2,33,'relay',3],[37,-4,'relay',3],[8,-22,'relay',3],
+ // Asia (4)
+ [44,34,'relay',4],[58,45,'relay',4],[72,19,'server',4],[81,40,'relay',4],[90,26,'fin',4],[105,11,'relay',4],[115,34,'server',4],[128,41,'relay',4],[139,36,'server',4],[132,57,'relay',4],[96,61,'relay',4],[66,57,'relay',4],[108,48,'hub',4],[76,29,'relay',4],[122,20,'fin',4],[88,49,'relay',4],
+ // Oceania (5)
+ [116,-24,'relay',5],[145,-22,'server',5],[150,-35,'fin',5],[173,-42,'relay',5],[121,-4,'relay',5],[133,-28,'hub',5],[147,-8,'relay',5],[161,-10,'server',5],[135,-40,'relay',5],
 ];
 const CADJ=[[0,1],[0,2],[0,4],[1,3],[2,3],[2,4],[3,4],[4,5]];
 let START=0; const UNLOCK=3;
@@ -1240,7 +1245,22 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
   if(cvs.width!==W)cvs.width=W; if(cvs.height!==H)cvs.height=H; ctx.setTransform(DPR,0,0,DPR,0,0);
   MAP_H=(CSSW-2*PADX)*(MYT-MYB)/(2*Math.PI); if(MAP_H>CSSH*0.99) MAP_H=CSSH*0.99; MAP_Y0=(CSSH-MAP_H)/2;
   for(const n of NODES){ n.x=projX(n.lon); n.y=projY(n.lat); }
+  relaxNodes();
   buildBasemap(); }
+/* push nodes apart so none overlap — hubs and financial nodes claim more room than relays */
+function spaceRadius(n){ return n.type==='hub'?24:n.type==='fin'?19:n.type==='server'?15:13; }
+function relaxNodes(){
+  const scale=Math.min(1,(CSSW||800)/900);   // ease spacing on very small screens so nodes stay on-map
+  for(let it=0; it<60; it++){ let moved=0;
+    for(let i=0;i<NODES.length;i++) for(let j=i+1;j<NODES.length;j++){
+      const a=NODES[i],b=NODES[j], min=(spaceRadius(a)+spaceRadius(b))*scale;
+      let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.01;
+      if(d<min){ const p=(min-d)/2/d; a.x-=dx*p; a.y-=dy*p; b.x+=dx*p; b.y+=dy*p; moved++; }
+    }
+    for(const n of NODES){ n.x=clamp(n.x,PADX+8,CSSW-PADX-8); n.y=clamp(n.y,MAP_Y0+10,MAP_Y0+MAP_H-8); }
+    if(!moved) break;
+  }
+}
 window.addEventListener('resize',layout);
 function tap(ox,oy){ if(G.over||G.ack||G.choice||G.techPick!=null)return;
   // ox/oy are offsetX/offsetY — computed by the browser relative to the canvas box,
@@ -1716,7 +1736,19 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
           ctx.strokeStyle=cbl?`rgba(201,164,255,${.5+pr2*.35})`:`rgba(55,224,255,${.45+pr2*.35})`; ctx.lineWidth=1.8;
           ctx.beginPath(); for(let k=0;k<6;k++){ const a=Math.PI/6+k*Math.PI/3, px=n.x+rr*Math.cos(a), py=n.y+rr*Math.sin(a); k?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); ctx.stroke(); }
       }
-      if(n.id===START && SE()>=TRACE_TIER){ const rp=.5+.5*Math.sin(t*5); ctx.strokeStyle=`rgba(255,93,108,${.4+rp*.5})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(n.x,n.y,16+rp*3,0,6.283);ctx.stroke(); }
+      if(n.id===START){
+        // persistent core identity — a rotating white reticle + label so home is unmistakable
+        const cr=r+8, threat=SE()>=TRACE_TIER;
+        ctx.save(); ctx.translate(n.x,n.y); ctx.rotate(t*0.5);
+        ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=1.7;
+        for(let k=0;k<4;k++){ ctx.rotate(Math.PI/2); ctx.beginPath(); ctx.moveTo(cr-4,0); ctx.lineTo(cr+4,0); ctx.stroke(); }
+        ctx.restore();
+        ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(n.x,n.y,cr,0,6.283); ctx.stroke();
+        ctx.font='bold 8px ui-monospace,Menlo,monospace'; ctx.textAlign='center';
+        ctx.lineWidth=2.6; ctx.strokeStyle='rgba(4,10,16,.92)'; ctx.strokeText('CORE',n.x,n.y-cr-5);
+        ctx.fillStyle='rgba(255,255,255,.96)'; ctx.fillText('CORE',n.x,n.y-cr-5);
+        if(threat){ const rp=.5+.5*Math.sin(t*5); ctx.strokeStyle=`rgba(255,93,108,${.45+rp*.5})`;ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(n.x,n.y,cr+4+rp*3,0,6.283);ctx.stroke(); }
+      }
     } else {
       shapePath(n.x,n.y,r,sh); ctx.fillStyle=take?`rgba(${c[0]},${c[1]},${c[2]},.16)`:(locked?'rgba(84,240,160,.05)':'rgba(90,110,140,.05)');ctx.fill();
       shapePath(n.x,n.y,r,sh); ctx.strokeStyle=take?`rgba(${c[0]},${c[1]},${c[2]},.95)`:(locked?'rgba(84,240,160,.4)':'rgba(120,140,165,.38)');ctx.lineWidth=1.4;ctx.stroke();
