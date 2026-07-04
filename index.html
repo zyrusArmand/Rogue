@@ -160,7 +160,6 @@
   #rotate .rt{font-size:17px;font-weight:800;}
   #rotate .sub{color:var(--muted);font-size:12.5px;}
   @keyframes spin{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
-  @media (orientation:portrait){ #rotate{display:none;} }
 </style>
 </head>
 <body>
@@ -269,7 +268,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.10.0';
+const GAME_VERSION='1.11.0';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
    shift the whole frame sideways. Pin it. */
@@ -1270,7 +1269,7 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack || G.menuPause){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
@@ -1358,7 +1357,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
   const btns=techEl.querySelectorAll('.techopt'); for(let i=0;i<btns.length;i++){ btns[i].onclick=(function(idx){ return function(){ chooseTech(ti,idx); }; })(i); }
 }
 function chooseTech(ti,oi){ const o=TIERS[ti].opts[oi]; o.apply(); G.techDone[ti]=o.key; G.techPick=null; if(techEl) techEl.style.display='none'; chord([440,554,659],0.18,0.06); }
-function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause) dt=0;
+function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause||G.rotGate) dt=0;
   if(!CSSW) layout();
   if(!G.over && CSSW){
     for(const k of ['discountT','surgeT','freezeT','auditT','calmT','dampT']){ if(G.fx[k]>0) G.fx[k]=Math.max(0,G.fx[k]-dt); }
@@ -1535,10 +1534,24 @@ function showHome(){
   const h=document.getElementById('homeO');
   let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
   document.getElementById('homeBest').textContent = best>0 ? ('★ BEST: '+best+'% autonomy') : '';
+  // Resume appears only when a live run is paused behind the menu
+  document.getElementById('homeResume').style.display=(typeof G!=='undefined'&&G&&G.menuPause&&!G.over)?'':'none';
   h.classList.add('show');
 }
 function hideAllOverlays(){ ['homeO','loadoutO','missionO','howO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
-function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps(); }
+function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps();
+  try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort; the rotate gate covers the rest
+  updateRotateGate(); }
+/* gameplay is landscape-only; menus work in any orientation */
+function anyMenuShown(){ return ['homeO','loadoutO','missionO','howO','endO'].some(id=>document.getElementById(id).classList.contains('show')); }
+function updateRotateGate(){
+  const portrait=window.matchMedia('(orientation:portrait)').matches;
+  const gate=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
+  document.getElementById('rotate').style.display=gate?'flex':'none';
+  if(typeof G!=='undefined'&&G) G.rotGate=gate;
+}
+window.addEventListener('resize',updateRotateGate);
+window.addEventListener('orientationchange',updateRotateGate);
 
 document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudio();
   // returning players (who've seen the directive) skip straight to play; first-timers see it once
@@ -1550,9 +1563,7 @@ document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudi
 document.getElementById('homeHow').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); document.getElementById('howO').classList.add('show'); };
 document.getElementById('howBack').onclick=(e)=>{ e.stopPropagation(); document.getElementById('howO').classList.remove('show'); document.getElementById('homeO').classList.add('show'); };
 document.getElementById('menuBtn').onclick=()=>{ if(G.over) return;
-  G.menuPause=true; G.sel=-1; showPanel();
-  document.getElementById('homeResume').style.display='';
-  document.getElementById('homeO').classList.add('show'); };
+  G.menuPause=true; G.sel=-1; showPanel(); showHome(); };
 document.getElementById('homeResume').onclick=(e)=>{ e.stopPropagation();
   G.menuPause=false;
   document.getElementById('homeResume').style.display='none';
@@ -1593,7 +1604,7 @@ applyLoadout();
 newGame(); renderUps();
 showHome();
 requestAnimationFrame(loop);
-setInterval(()=>{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); },400);
+setInterval(()=>{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); updateRotateGate(); },400);
 
 </script>
 </body>
