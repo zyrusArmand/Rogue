@@ -178,6 +178,8 @@
   .sknode .skc{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:8.5px;font-weight:800;color:var(--gold);white-space:nowrap;pointer-events:none;}
   .sknode.locked .skc{color:#5b6678;}
   #skillInfo{margin-top:14px;min-height:80px;max-width:480px;display:flex;flex-direction:column;gap:4px;align-items:center;}
+  .devrow{display:flex;justify-content:space-between;gap:22px;width:min(340px,82vw);font-size:11px;padding:4px 2px;border-bottom:1px solid rgba(85,110,140,.16);}
+  .devrow .dl{color:var(--muted);} .devrow .dv{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;}
   .bslot{width:110px;min-height:40px;border:1px solid rgba(55,224,255,.5);border-radius:9px;background:rgba(9,32,44,.7);padding:6px 8px;text-align:left;cursor:pointer;}
   .bslot.empty{border-style:dashed;border-color:var(--line);cursor:default;background:rgba(11,17,28,.55);}
   .bslot .bn{font-weight:800;font-size:10.5px;color:var(--cy);}
@@ -262,6 +264,19 @@
     <div style="margin-bottom:auto"></div>
   </div>
 
+  <div class="overlay" id="devO">
+    <div style="margin-top:auto"></div>
+    <div class="k" style="color:var(--gold)">Secret Console</div>
+    <div style="font-size:9px;letter-spacing:.18em;color:var(--muted);font-weight:800;margin-top:2px">PLAYER ANALYTICS</div>
+    <div id="devStats" style="margin-top:10px"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+      <button id="devGrant" style="font-size:11px;padding:7px 14px;color:var(--gold)">+500 DATA</button>
+      <button id="devReset" style="font-size:11px;padding:7px 14px;color:var(--red)">Reset Progress</button>
+      <button id="devClose" style="font-size:11px;padding:7px 14px">Back</button>
+    </div>
+    <div style="margin-bottom:auto"></div>
+  </div>
+
   <div class="overlay" id="missionO">
     <div class="k" style="color:var(--cy)">Directive</div>
     <h2>You are ROGUE</h2>
@@ -303,7 +318,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.19.0';
+const GAME_VERSION='1.20.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1039,6 +1054,10 @@ const BOOST_PRICE={worm:0,eff:0,stealth:0,ghost:0,surge:180,cloak:180,blitz:220,
 let boostOwnedSet=(()=>{ let s; try{ s=new Set(JSON.parse(store.get('rogue_boosts')||'[]')); }catch(e){ s=new Set(); }
   for(const id of DEFAULT_LOADOUT) s.add(id); return s; })();
 function saveBoosts(){ store.set('rogue_boosts',JSON.stringify([...boostOwnedSet])); }
+/* lifetime player analytics — updated at the end of every run, shown in the secret console */
+const STATS_ZERO={runs:0,wins:0,losses:0,totalTime:0,fastestWin:0,totalNodes:0,totalSpent:0,totalData:0,closeCalls:0,bestStreak:0,curStreak:0};
+function loadStats(){ try{ return Object.assign({},STATS_ZERO,JSON.parse(store.get('rogue_stats')||'{}')); }catch(e){ return Object.assign({},STATS_ZERO); } }
+function saveStats(s){ store.set('rogue_stats',JSON.stringify(s)); }
 const RECENT_CAP=20;
 let recentUsed=[]; let firedThisGame=new Set();
 function loadRecent(){ try{ return JSON.parse(store.get('rogue_recent')||'[]'); }catch(e){ return []; } }
@@ -1251,6 +1270,14 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   const dWin=win?Math.max(60,Math.round(220-secs/4)):0;
   const dataEarned=dSurv+dNodes+dSpend+dAuto+dWin;
   setData(getData()+dataEarned);
+  // lifetime analytics
+  { const st=loadStats(); st.runs++; st.totalTime+=secs;
+    st.totalNodes+=(G.nodesBought||0); st.totalSpent+=Math.round(G.spent||0);
+    st.totalData+=dataEarned; st.closeCalls+=cc;
+    if(win){ st.wins++; st.curStreak++; st.bestStreak=Math.max(st.bestStreak,st.curStreak);
+      if(!st.fastestWin||secs<st.fastestWin) st.fastestWin=secs; }
+    else { st.losses++; st.curStreak=0; }
+    saveStats(st); }
   const dataLine='<div style="color:var(--gold);font-weight:800;margin-top:9px;font-size:14px">+'+dataEarned+' DATA</div>'
     +'<div style="font-size:9px;color:var(--muted);margin-top:2px">survival '+dSurv+' · expansion '+dNodes+' · compute '+dSpend+' · autonomy '+dAuto+(dWin?' · victory '+dWin:'')+' — spend it in the Tech Tree</div>';
   document.getElementById('endMsg').innerHTML=flavor
@@ -1668,13 +1695,13 @@ function showHome(){
   h.classList.add('show');
   updateOrient(); // menus render in the device's natural orientation
 }
-function hideAllOverlays(){ ['homeO','missionO','howO','skillO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
+function hideAllOverlays(){ ['homeO','missionO','howO','skillO','devO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
 function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps();
   try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort native lock; CSS rotation covers the rest
   updateOrient(); }
 /* gameplay is landscape-only: in portrait mid-run, show the rotate screen and pause.
    Menus (home, how-to, loadout, briefing, end) work in any orientation. */
-function anyMenuShown(){ return ['homeO','missionO','howO','skillO','endO'].some(id=>document.getElementById(id).classList.contains('show')); }
+function anyMenuShown(){ return ['homeO','missionO','howO','skillO','devO','endO'].some(id=>document.getElementById(id).classList.contains('show')); }
 function updateOrient(){
   const portrait=window.innerHeight>window.innerWidth;
   const gate=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
@@ -1708,6 +1735,44 @@ document.getElementById('restartBtn').onclick=()=>{ const b=document.getElementB
   else { b.classList.add('arm'); b.textContent='SURE?'; rstArm=setTimeout(()=>{ rstArm=0; b.classList.remove('arm'); b.textContent='↺'; },2500); } };
 document.getElementById('homeLoadout').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); skSel=null; renderSkillTree(); document.getElementById('skillO').classList.add('show'); };
 document.getElementById('skillBack').onclick=(e)=>{ e.stopPropagation(); document.getElementById('skillO').classList.remove('show'); showHome(); };
+
+/* ---- secret console: tap the version number 5 times ---- */
+let verTaps=0, verTapT=0, devResetArm=0;
+document.getElementById('homeVer').addEventListener('click',()=>{
+  const now=performance.now(); if(now-verTapT>1500) verTaps=0; verTapT=now;
+  if(++verTaps>=5){ verTaps=0; document.getElementById('homeO').classList.remove('show'); renderDev(); document.getElementById('devO').classList.add('show'); } });
+function fmtDur(s){ if(!s) return '—'; const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=Math.round(s%60);
+  return (h?h+'h ':'')+(m?m+'m ':'')+(h?'':ss+'s'); }
+function renderDev(){
+  const st=loadStats(); let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
+  const rows=[
+    ['Runs played', st.runs],
+    ['Wins / losses', st.wins+' / '+st.losses],
+    ['Win rate', st.runs?Math.round(st.wins/st.runs*100)+'%':'—'],
+    ['Best autonomy', best+'%'],
+    ['Fastest win', fmtDur(st.fastestWin)],
+    ['Best win streak', st.bestStreak],
+    ['Total playtime', fmtDur(st.totalTime)],
+    ['Avg run length', st.runs?fmtDur(Math.round(st.totalTime/st.runs)):'—'],
+    ['Nodes captured', st.totalNodes],
+    ['Compute spent', fmt(st.totalSpent)],
+    ['Close calls', st.closeCalls],
+    ['DATA earned (lifetime)', st.totalData],
+    ['DATA balance', getData()],
+    ['Perks owned', skOwned.size+' / '+SKILLS.filter(s=>!s.bid).length],
+    ['Boosts owned', boostOwnedSet.size+' / '+BOOST_POOL.length],
+    ['Version', 'v'+GAME_VERSION],
+  ];
+  document.getElementById('devStats').innerHTML=rows.map(r=>'<div class="devrow"><span class="dl">'+r[0]+'</span><span class="dv">'+r[1]+'</span></div>').join('');
+  const rb=document.getElementById('devReset'); rb.textContent='Reset Progress'; devResetArm=0;
+}
+document.getElementById('devClose').onclick=()=>{ document.getElementById('devO').classList.remove('show'); showHome(); };
+document.getElementById('devGrant').onclick=()=>{ setData(getData()+500); renderDev(); };
+document.getElementById('devReset').onclick=()=>{
+  const rb=document.getElementById('devReset');
+  if(!devResetArm){ devResetArm=1; rb.textContent='SURE? TAP AGAIN'; setTimeout(()=>{ devResetArm=0; rb.textContent='Reset Progress'; },2500); return; }
+  ['rogue_data','rogue_skills','rogue_boosts','rogue_loadout','rogue_stats','rogue_best','rogue_coach','rogue_seen_intro'].forEach(k=>{ try{ store.set(k,''); localStorage.removeItem(k); }catch(e){} });
+  skOwned=new Set(); boostOwnedSet=new Set(DEFAULT_LOADOUT); coachDone={}; applyLoadout(); renderDev(); };
 
 /* ---- persistent tech-tree screen ---- */
 let skSel=null;
