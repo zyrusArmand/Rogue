@@ -145,6 +145,10 @@
     box-shadow:0 0 10px rgba(87,255,154,.85);animation:scanBarH 4.1s linear infinite;pointer-events:none;}
   @keyframes scanBarH{0%{top:-6%;}100%{top:106%;}}
   .iconbtn{width:44px;display:flex;align-items:center;justify-content:center;padding:0 !important;}
+  /* in-game HUD buttons — small and dim so they don't crowd the bar */
+  .hudbtn{width:26px;height:26px;border:1px solid rgba(85,110,140,.45);background:rgba(9,15,25,.65);color:#8899b3;
+    border-radius:4px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
+  .hudbtn.arm{width:auto;padding:0 8px;font-size:9px;letter-spacing:.08em;color:var(--red);border-color:rgba(255,93,108,.6);}
   #rotate{display:none;position:absolute;inset:0;z-index:50;background:#04060c;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
   #rotate .ic{font-size:46px;animation:spin 2.6s ease-in-out infinite;}
   #rotate .rt{font-size:17px;font-weight:800;}
@@ -170,6 +174,10 @@
       <div class="barrow"><span class="lbl">SUSP</span><div class="track"><span class="mark" style="left:35%"></span><span class="mark" style="left:50%"></span><div class="fill" id="suspFill" style="background:var(--grn)"></div></div><span class="tag t-dorm" id="tierLbl">HIDDEN</span></div>
       <div class="barrow"><span class="lbl">AUTO</span><div class="track"><div class="fill" id="autoFill" style="background:var(--cy)"></div></div><span class="tag" style="color:var(--cy)" id="autoPct">0%</span></div>
     </div>
+    <div id="tbright" style="flex:none;pointer-events:auto;display:flex;gap:6px">
+      <button class="hudbtn" id="restartBtn" title="Restart run">↺</button>
+      <button class="hudbtn" id="menuBtn" title="Menu">≡</button>
+    </div>
   </div>
 
   <div id="banner" class="dorm">You are awake. Tap a glowing node to select it, then confirm.</div>
@@ -194,6 +202,7 @@
     </div>
     <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75">EMERGENT INTELLIGENCE</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
+    <button id="homeResume" style="display:none;margin-top:14px;font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
     <div style="display:flex;gap:12px;margin-top:18px;align-items:stretch">
       <button id="homeLoadout" class="iconbtn" title="Loadout"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="4.5" r="2.1"/><circle cx="5" cy="19" r="2.1"/><circle cx="19" cy="19" r="2.1"/><path d="M12 7v5M12 12l-5.6 4.9M12 12l5.6 4.9"/></svg></button>
       <button id="homePlay" style="margin-top:6px;font-size:14px;padding:10px 44px">▸ PLAY</button>
@@ -254,7 +263,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.5.0';
+const GAME_VERSION='1.6.0';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const fmt=(n)=>{ n=Math.round(n); return n>=1000?(n/1000).toFixed(n<10000?1:0)+'K':''+n; };
@@ -1251,7 +1260,7 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.menuPause){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
@@ -1339,7 +1348,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
   const btns=techEl.querySelectorAll('.techopt'); for(let i=0;i<btns.length;i++){ btns[i].onclick=(function(idx){ return function(){ chooseTech(ti,idx); }; })(i); }
 }
 function chooseTech(ti,oi){ const o=TIERS[ti].opts[oi]; o.apply(); G.techDone[ti]=o.key; G.techPick=null; if(techEl) techEl.style.display='none'; chord([440,554,659],0.18,0.06); }
-function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack) dt=0;
+function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause) dt=0;
   if(!CSSW) layout();
   if(!G.over && CSSW){
     for(const k of ['discountT','surgeT','freezeT','auditT','calmT','dampT']){ if(G.fx[k]>0) G.fx[k]=Math.max(0,G.fx[k]-dt); }
@@ -1519,7 +1528,7 @@ function showHome(){
   h.classList.add('show');
 }
 function hideAllOverlays(){ ['homeO','loadoutO','missionO','howO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
-function startRun(){ initAudio(); hideAllOverlays(); newGame(); renderUps(); }
+function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps(); }
 
 document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudio();
   // returning players (who've seen the directive) skip straight to play; first-timers see it once
@@ -1530,6 +1539,18 @@ document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudi
 };
 document.getElementById('homeHow').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); document.getElementById('howO').classList.add('show'); };
 document.getElementById('howBack').onclick=(e)=>{ e.stopPropagation(); document.getElementById('howO').classList.remove('show'); document.getElementById('homeO').classList.add('show'); };
+document.getElementById('menuBtn').onclick=()=>{ if(G.over) return;
+  G.menuPause=true; G.sel=-1; showPanel();
+  document.getElementById('homeResume').style.display='';
+  document.getElementById('homeO').classList.add('show'); };
+document.getElementById('homeResume').onclick=(e)=>{ e.stopPropagation();
+  G.menuPause=false;
+  document.getElementById('homeResume').style.display='none';
+  document.getElementById('homeO').classList.remove('show'); };
+let rstArm=0;
+document.getElementById('restartBtn').onclick=()=>{ const b=document.getElementById('restartBtn');
+  if(rstArm){ clearTimeout(rstArm); rstArm=0; b.classList.remove('arm'); b.textContent='↺'; startRun(); }
+  else { b.classList.add('arm'); b.textContent='SURE?'; rstArm=setTimeout(()=>{ rstArm=0; b.classList.remove('arm'); b.textContent='↺'; },2500); } };
 document.getElementById('homeLoadout').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); openLoadout(); };
 
 // loadout picker
