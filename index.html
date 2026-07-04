@@ -139,21 +139,21 @@
   /* scan lines: one sweep across the frame, fade out at the wall, return a few seconds later */
   #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;opacity:0;
     background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 9s linear infinite;pointer-events:none;}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 4.4s linear infinite;pointer-events:none;}
   @keyframes scanBar{
     0%{left:2px;opacity:0;}
-    2%{opacity:1;}
-    20%{opacity:1;}
-    22%{left:calc(100% - 4px);opacity:0;}
+    4%{opacity:1;}
+    42%{opacity:1;}
+    46%{left:calc(100% - 4px);opacity:0;}
     100%{left:calc(100% - 4px);opacity:0;}}
   #titleBarH{position:absolute;left:4px;right:4px;height:2px;top:2px;opacity:0;
     background:linear-gradient(90deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 12s linear infinite;animation-delay:4.5s;pointer-events:none;}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 5.2s linear infinite;animation-delay:1.2s;pointer-events:none;}
   @keyframes scanBarH{
     0%{top:2px;opacity:0;}
-    2%{opacity:1;}
-    16%{opacity:1;}
-    18%{top:calc(100% - 4px);opacity:0;}
+    4%{opacity:1;}
+    38%{opacity:1;}
+    42%{top:calc(100% - 4px);opacity:0;}
     100%{top:calc(100% - 4px);opacity:0;}}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
@@ -272,7 +272,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.12.1';
+const GAME_VERSION='1.13.0';
 let ROT=false; // gameplay is rendered rotated 90° on portrait screens
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1110,7 +1110,8 @@ const MYT=MILLER(LAT_TOP), MYB=MILLER(LAT_BOT);
 const projX=(lon)=>PADX+((lon+180)/360)*(CSSW-2*PADX);
 const projY=(lat)=>MAP_Y0+((MYT-MILLER(lat))/(MYT-MYB))*MAP_H;
 function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;CSSH=f.clientHeight; if(!CSSW)return;
-  cvs.width=Math.round(CSSW*DPR);cvs.height=Math.round(CSSH*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
+  const W=Math.round(CSSW*DPR),H=Math.round(CSSH*DPR);
+  if(cvs.width!==W)cvs.width=W; if(cvs.height!==H)cvs.height=H; ctx.setTransform(DPR,0,0,DPR,0,0);
   MAP_H=(CSSW-2*PADX)*(MYT-MYB)/(2*Math.PI); if(MAP_H>CSSH*0.99) MAP_H=CSSH*0.99; MAP_Y0=(CSSH-MAP_H)/2;
   for(const n of NODES){ n.x=projX(n.lon); n.y=projY(n.lat); }
   buildBasemap(); }
@@ -1172,8 +1173,11 @@ function brackets(x,y,r,style,alpha){ ctx.strokeStyle=style; ctx.globalAlpha=alp
   for(const cn of [[-1,-1],[1,-1],[1,1],[-1,1]]){ ctx.beginPath(); ctx.moveTo(x+cn[0]*s,y+cn[1]*s-cn[1]*l); ctx.lineTo(x+cn[0]*s,y+cn[1]*s); ctx.lineTo(x+cn[0]*s-cn[0]*l,y+cn[1]*s); ctx.stroke(); } ctx.globalAlpha=1; }
 let baseCvs=null, baseCtx=null;
 function buildBasemap(){ if(!CSSW) return;
-  baseCvs=document.createElement('canvas'); baseCvs.width=Math.round(CSSW*DPR); baseCvs.height=Math.round(CSSH*DPR);
-  const b=baseCvs.getContext('2d'); baseCtx=b; b.setTransform(DPR,0,0,DPR,0,0);
+  // reuse one canvas — reallocating GPU-backed canvases on every resize can crash iOS Safari
+  const W=Math.round(CSSW*DPR), H=Math.round(CSSH*DPR);
+  if(!baseCvs) baseCvs=document.createElement('canvas');
+  if(baseCvs.width!==W) baseCvs.width=W; if(baseCvs.height!==H) baseCvs.height=H;
+  const b=baseCvs.getContext('2d'); baseCtx=b; b.setTransform(DPR,0,0,DPR,0,0); b.clearRect(0,0,CSSW,CSSH);
   const path=(poly)=>{ b.beginPath(); b.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let i=1;i<poly.length;i++) b.lineTo(projX(poly[i][0]),projY(poly[i][1])); b.closePath(); };
   // deep ocean gradient
   const og=b.createLinearGradient(0,0,0,CSSH); og.addColorStop(0,'#082a38'); og.addColorStop(.55,'#061f2b'); og.addColorStop(1,'#05161f');
@@ -1561,7 +1565,7 @@ function updateOrient(){
   const w=window.innerHeight, h=window.innerWidth;
   if(want && (!ROT || w!==rotW || h!==rotH)){
     rotW=w; rotH=h; ROT=true;
-    frameEl.style.cssText='width:'+w+'px;height:'+h+'px;top:0;left:'+h+'px;right:auto;bottom:auto;transform:rotate(90deg);transform-origin:left top;';
+    frameEl.style.cssText='width:'+w+'px;height:'+h+'px;top:0;left:'+h+'px;right:auto;bottom:auto;transform:rotate(90deg);transform-origin:left top;-webkit-backface-visibility:hidden;backface-visibility:hidden;';
     layout();
   } else if(!want && ROT){
     ROT=false; rotW=rotH=0; frameEl.removeAttribute('style'); layout();
@@ -1620,8 +1624,11 @@ document.getElementById('loadoutDone').onclick=()=>{ if(editLoadout.length!==4)r
 applyLoadout();
 newGame(); renderUps();
 showHome();
+/* one bad frame must not kill the render loop (a dead loop reads as a black screen) */
+const coreLoop=loop;
+loop=(now)=>{ try{ coreLoop(now); }catch(e){ requestAnimationFrame(loop); } };
 requestAnimationFrame(loop);
-setInterval(()=>{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); updateOrient(); },400);
+setInterval(()=>{ try{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); updateOrient(); }catch(e){} },400);
 
 </script>
 </body>
