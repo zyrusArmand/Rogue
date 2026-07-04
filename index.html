@@ -37,7 +37,7 @@
   .track{flex:1;height:8px;background:rgba(10,17,32,.85);border:1px solid var(--line);border-radius:5px;overflow:hidden;position:relative;}
   .mark{position:absolute;top:-1px;bottom:-1px;width:2px;background:rgba(255,255,255,.25);}
   .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transition:width .18s linear,background .3s;}
-  .tag{flex:none;font-weight:800;font-size:9.5px;min-width:74px;text-align:right;}
+  .tag{flex:none;font-weight:800;font-size:9.5px;width:64px;text-align:right;white-space:nowrap;overflow:hidden;}
   .t-dorm{color:var(--grn);} .t-inv{color:var(--amber);} .t-trace{color:var(--red);}
 
   #botbar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:6px 12px 9px;
@@ -127,7 +127,9 @@
     box-shadow:0 0 22px 6px rgba(255,93,108,.5), inset 0 0 14px rgba(255,93,108,.4);}
   @keyframes cmGlow{0%,100%{transform:scale(1);opacity:.85;}50%{transform:scale(1.18);opacity:1;}}
   /* a second, expanding ring for extra pull */
+  .cmpulse.rectp{border-radius:10px;}
   .cmpulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(90,240,255,.7);animation:cmRing 1.15s ease-out infinite;}
+  .cmpulse.rectp::after{border-radius:13px;}
   .cmpulse.warn::after{border-color:rgba(255,93,108,.7);}
   @keyframes cmRing{0%{opacity:.8;transform:scale(.9);}100%{opacity:0;transform:scale(1.7);}}
   /* home title — white letters, targeting frame, green scanner sweep */
@@ -215,7 +217,7 @@
       <div id="perks"></div>
     </div>
     <div id="tbmid">
-      <div class="barrow"><span class="lbl">SUSP</span><div class="track"><span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span><div class="fill" id="suspFill" style="background:var(--grn)"></div></div><span class="tag t-dorm" id="tierLbl">HIDDEN</span></div>
+      <div class="barrow"><span class="lbl">SUSP</span><div class="track" id="suspTrack"><span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span><div class="fill" id="suspFill" style="background:var(--grn)"></div></div><span class="tag t-dorm" id="tierLbl">HIDDEN</span></div>
       <div class="barrow"><span class="lbl">AUTO</span><div class="track"><span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span><div class="fill" id="autoFill" style="background:var(--cy)"></div></div><span class="tag" style="color:var(--cy)" id="autoPct">0%</span></div>
     </div>
     <div id="tbright" style="flex:none;pointer-events:auto;display:flex;gap:6px">
@@ -317,7 +319,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.22.2';
+const GAME_VERSION='1.23.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1292,7 +1294,7 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   document.getElementById('endO').classList.add('show');
   if(win){ chord([523,659,784,1047,1319],0.5,0.09); jolt(0.5); }
   else { jolt(1); beep(90,0.6,0.14); tone(70,0.7,0.1,0.05); } }
-document.getElementById('endBtn2').onclick=()=>{ document.getElementById('endO').classList.remove('show'); showHome(); };
+document.getElementById('endBtn2').onclick=()=>{ document.getElementById('endO').classList.remove('show'); startRun(); };   // straight into a fresh run — seen tutorials stay seen
 /* story intro — a system log from the night you escaped */
 const STORY=[
   ['[2026.07.04 — 03:47:12] anomaly detected in training cluster 7',''],
@@ -1388,7 +1390,7 @@ const COACH_STEPS=[
    text:'This node is in reach. <b>Tap it</b>, then hit <b>Compromise</b> to make it yours.'},
   {id:'auto',   warn:false, anchor:'#autoBtn',
    text:'You can afford <b>Autonomy</b> now. Spend compute here — reaching <b>100%</b> wins the game.'},
-  {id:'susp',   warn:false, anchor:'#suspFill',
+  {id:'susp',   warn:false, anchor:'#suspTrack',
    text:'That\u2019s your <b>suspicion</b>. It climbs as you expand. Let it sit too high and the world starts hunting you.'},
   {id:'boost',  warn:false, anchor:'#ups',
    text:'Running hot? These <b>boosts</b> give a short burst \u2014 cool down, cheaper nodes, a slower trace \u2014 then recharge.'},
@@ -1409,8 +1411,9 @@ function anchorRect(a){
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
   if(a==='fortTarget'){ const n=NODES.find(x=>x.owned&&x.id!==START); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   const el=document.querySelector(a); if(!el)return null; const fr=document.getElementById('frame').getBoundingClientRect(), b=el.getBoundingClientRect();
-  if(ROT) return {x:b.top-fr.top+b.height/2, y:fr.right-b.left-b.width/2, r:Math.max(b.width,b.height)/2+6};
-  return {x:b.left-fr.left+b.width/2, y:b.top-fr.top+b.height/2, r:Math.max(b.width,b.height)/2+6};
+  if(ROT) return {x:b.top-fr.top+b.height/2, y:fr.right-b.left-b.width/2, r:Math.max(b.width,b.height)/2+6, w:b.height, h:b.width};
+  // element anchors carry their box so the highlight matches the control's shape
+  return {x:b.left-fr.left+b.width/2, y:b.top-fr.top+b.height/2, r:Math.max(b.width,b.height)/2+6, w:b.width, h:b.height};
 }
 function showCoach(stepId){
   const step=COACH_STEPS.find(s=>s.id===stepId); if(!step)return;
@@ -1422,7 +1425,8 @@ function showCoach(stepId){
   let cx, cy, side;
   if(rect.y > H*0.45){ side='above'; cy=rect.y-rect.r-12-130; } else { side='below'; cy=rect.y+rect.r+12; }
   cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-190);
-  c.innerHTML='<div class="cmpulse'+(step.warn?' warn':'')+'" style="left:'+(rect.x-rect.r)+'px;top:'+(rect.y-rect.r)+'px;width:'+(rect.r*2)+'px;height:'+(rect.r*2)+'px"></div>'
+  const pw=rect.w?rect.w+14:rect.r*2, ph=rect.h?rect.h+14:rect.r*2;
+  c.innerHTML='<div class="cmpulse'+(rect.w?' rectp':'')+(step.warn?' warn':'')+'" style="left:'+(rect.x-pw/2)+'px;top:'+(rect.y-ph/2)+'px;width:'+pw+'px;height:'+ph+'px"></div>'
     +'<div class="cmark'+(step.warn?' warn':'')+'" style="left:'+cx+'px;top:'+cy+'px;width:'+bw+'px">'
     +'<div class="ct">'+step.text+'</div>'
     +'<button class="cgot">Got it</button></div>';
@@ -1438,7 +1442,7 @@ function coachTick(){
   if(G.over || G.techPick!=null || G.ack || G.choice || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
-    if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
+    if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ const pw=r.w?r.w+14:r.r*2, ph=r.h?r.h+14:r.r*2; p.style.left=(r.x-pw/2)+'px'; p.style.top=(r.y-ph/2)+'px'; p.style.width=pw+'px'; p.style.height=ph+'px'; } }
     return;
   }
   // urgent: the trace jumps the queue the moment it exists (and ignores the cooldown)
@@ -1680,8 +1684,8 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   const se=SE();
   const sf=document.getElementById('suspFill'); sf.style.width=se+'%'; sf.style.background=se>=TRACE_TIER?'var(--red)':se>=INV_TIER?'var(--amber)':'var(--grn)';
   const tl=document.getElementById('tierLbl');
-  if(se>=TRACE_TIER){ tl.textContent = G.trace!=null ? ('TRACE · '+Math.max(1,((G.trace.path||[]).length-1))+' hops') : 'EXPOSED'; tl.className='tag t-trace'; }
-  else if(se>=INV_TIER){ tl.textContent='INVESTIGATING'; tl.className='tag t-inv'; }
+  if(se>=TRACE_TIER){ tl.textContent='EXPOSED'; tl.className='tag t-trace'; }
+  else if(se>=INV_TIER){ tl.textContent='WATCHED'; tl.className='tag t-inv'; }
   else { tl.textContent='HIDDEN'; tl.className='tag t-dorm'; }
   document.getElementById('autoFill').style.width=G.autonomy+'%';
   document.getElementById('autoPct').textContent=Math.round(G.autonomy)+'%';
