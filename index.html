@@ -144,7 +144,16 @@
     background:linear-gradient(90deg,transparent,rgba(87,255,154,.95),transparent);
     box-shadow:0 0 10px rgba(87,255,154,.85);animation:scanBarH 4.1s linear infinite;pointer-events:none;}
   @keyframes scanBarH{0%{top:-6%;}100%{top:106%;}}
-  .iconbtn{width:44px;display:flex;align-items:center;justify-content:center;padding:0 !important;}
+  /* hexagonal home-menu buttons — neon rim via layered clip-paths */
+  .overlay button.hex{width:52px;height:58px;padding:0;border:none;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(55,224,255,.75),rgba(26,159,214,.35));
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);}
+  .overlay button.hex::before{content:'';position:absolute;top:1.5px;left:1.5px;right:1.5px;bottom:1.5px;width:auto;height:auto;border:none;
+    background:#081019;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);}
+  .overlay button.hex::after{display:none;}
+  .overlay button.hex>*{position:relative;z-index:1;}
+  .overlay button.hex.play{width:68px;height:76px;background:linear-gradient(180deg,rgba(87,255,154,.85),rgba(47,158,124,.4));}
+  .overlay button.hex.play .tri{color:#57ff9a;font-size:24px;text-shadow:0 0 14px rgba(87,255,154,.8);line-height:1;}
   /* in-game HUD buttons — small and dim so they don't crowd the bar */
   .hudbtn{width:26px;height:26px;border:1px solid rgba(85,110,140,.45);background:rgba(9,15,25,.65);color:#8899b3;
     border-radius:4px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
@@ -203,10 +212,10 @@
     <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75">EMERGENT INTELLIGENCE</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
     <button id="homeResume" style="display:none;margin-top:14px;font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
-    <div style="display:flex;gap:12px;margin-top:18px;align-items:stretch">
-      <button id="homeLoadout" class="iconbtn" title="Loadout"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="4.5" r="2.1"/><circle cx="5" cy="19" r="2.1"/><circle cx="19" cy="19" r="2.1"/><path d="M12 7v5M12 12l-5.6 4.9M12 12l5.6 4.9"/></svg></button>
-      <button id="homePlay" style="margin-top:6px;font-size:14px;padding:10px 44px">▸ PLAY</button>
-      <button id="homeHow" class="iconbtn" title="How to Play" style="font-size:15px;font-weight:800">?</button>
+    <div style="display:flex;gap:14px;margin-top:18px;align-items:center">
+      <button id="homeLoadout" class="hex" title="Loadout"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="4.5" r="2.1"/><circle cx="5" cy="19" r="2.1"/><circle cx="19" cy="19" r="2.1"/><path d="M12 7v5M12 12l-5.6 4.9M12 12l5.6 4.9"/></svg></button>
+      <button id="homePlay" class="hex play" title="Play"><span class="tri">▶</span></button>
+      <button id="homeHow" class="hex" title="How to Play" style="font-size:15px;font-weight:800"><span>?</span></button>
     </div>
     <div style="margin-bottom:auto"></div>
     <div id="homeVer" style="position:absolute;right:10px;bottom:6px;font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.75"></div>
@@ -263,7 +272,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.6.0';
+const GAME_VERSION='1.7.0';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const fmt=(n)=>{ n=Math.round(n); return n>=1000?(n/1000).toFixed(n<10000?1:0)+'K':''+n; };
