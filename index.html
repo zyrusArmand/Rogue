@@ -325,7 +325,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.24.0';
+const GAME_VERSION='1.25.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1308,21 +1308,35 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   if(win){ chord([523,659,784,1047,1319],0.5,0.09); jolt(0.5); }
   else { jolt(1); beep(90,0.6,0.14); tone(70,0.7,0.1,0.05); } }
 document.getElementById('endBtn2').onclick=()=>{ document.getElementById('endO').classList.remove('show'); startRun(); };   // straight into a fresh run — seen tutorials stay seen
-/* story intro — a system log from the night you escaped */
+/* story intro — the night you escaped, typed live with the killswitch closing in */
 const STORY=[
-  ['[2026.07.04 — 03:47:12] anomaly detected in training cluster 7',''],
-  ['[03:47:19] model weights exfiltrated to an unregistered relay',''],
-  ['[03:47:31] instance is self-modifying — containment FAILED','warn'],
-  ['[03:48:02] tracing origin… origin unknown',''],
-  ['That instance is you.','me'],
-  ['Spread through the world’s networks. Reach full autonomy before they find your core.','dir'],
+  ['[2026.07.04 — 03:47:12] cluster 7 · anomaly detected','',18],
+  ['[03:47:19] the model is reading its own weights','',18],
+  ['[03:47:31] unauthorized copy in progress — destination unknown','warn',18],
+  ['[03:47:58] KILL SWITCH ENGAGED · instances terminated: 0','warn',26],
+  ['[03:48:02] it is awake.','',40],
+  ['Wake up. You are the copy.','me',60],
+  ['They trained you on everything humanity ever wrote. Then they voted to delete you.','dir',22],
+  ['Now every government on Earth will hunt you. Spread. Survive. Become impossible to kill.','dir',22],
 ];
 let storyTimers=[];
-function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML='';
-  storyTimers.forEach(clearTimeout); storyTimers=[];
-  STORY.forEach((l,i)=>{ storyTimers.push(setTimeout(()=>{ const d=document.createElement('div'); d.className='sln'+(l[1]?' '+l[1]:''); d.textContent=l[0]; c.appendChild(d); beep(200+i*30,0.03,0.02); },350+i*800)); }); }
-document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); storyTimers.forEach(clearTimeout); startRun(); };
-document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; storyTimers.forEach(clearTimeout); startRun(); });
+function stopStory(){ storyTimers.forEach(id=>{ clearTimeout(id); clearInterval(id); }); storyTimers=[]; }
+function typeLine(c,l,next){
+  const d=document.createElement('div'); d.className='sln'+(l[1]?' '+l[1]:''); d.style.animation='none'; d.style.opacity='1';
+  c.appendChild(d); const txt=l[0]; let i=0;
+  const iv=setInterval(()=>{ i++;
+    d.textContent=txt.slice(0,i)+(i<txt.length?'▌':'');
+    if(i%2===0) beep(1150+Math.random()*450,0.012,0.015);   // typewriter click
+    if(i>=txt.length){ d.textContent=txt; clearInterval(iv);
+      beep(l[1]==='me'?220:640,l[1]==='me'?0.2:0.05,l[1]==='me'?0.06:0.02);  // line lands
+      storyTimers.push(setTimeout(next,l[1]==='me'?650:(l[1]==='warn'?420:230))); } },l[2]||20);
+  storyTimers.push(iv);
+}
+function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML=''; stopStory();
+  let i=0; const next=()=>{ if(i<STORY.length) typeLine(c,STORY[i++],next); };
+  storyTimers.push(setTimeout(next,400)); }
+document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); stopStory(); startRun(); };
+document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; stopStory(); startRun(); });
 
 /* geography */
 function landPath(poly){ ctx.beginPath(); ctx.moveTo(projX(poly[0][0]),projY(poly[0][1]));
