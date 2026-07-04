@@ -272,7 +272,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.13.0';
+const GAME_VERSION='1.13.1';
 let ROT=false; // gameplay is rendered rotated 90° on portrait screens
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1117,10 +1117,14 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
   buildBasemap(); }
 window.addEventListener('resize',layout);
 function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const r=cvs.getBoundingClientRect();
-  // when the frame is rotated 90°, map viewport coords into the frame's landscape space
-  const px=ROT?(cy-r.top):(cx-r.left), py=ROT?(r.right-cx):(cy-r.top);
+  // when the frame is rotated 90°, map viewport coords into the frame's landscape space,
+  // then normalize by the measured on-screen size — if the viewport changed since the last
+  // layout() the canvas bitmap is CSS-scaled and raw coords would miss the nodes
+  let px=ROT?(cy-r.top):(cx-r.left), py=ROT?(r.right-cx):(cy-r.top);
+  const vw=ROT?r.height:r.width, vh=ROT?r.width:r.height;
+  if(vw>0&&vh>0){ px*=CSSW/vw; py*=CSSH/vh; }
   let best=null,bd=1e9; for(const n of NODES){const dd=(px-n.x)**2+(py-n.y)**2; if(dd<bd){bd=dd;best=n;}}
-  if(!best||bd>28*28){ G.sel=-1; showPanel(); return; }
+  if(!best||bd>32*32){ G.sel=-1; showPanel(); return; }
   G.sel=best.id; showPanel(); }
 cvs.addEventListener('click',e=>tap(e.clientX,e.clientY));
 cvs.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];tap(t.clientX,t.clientY);},{passive:false});
@@ -1572,7 +1576,9 @@ function updateOrient(){
   }
 }
 window.addEventListener('resize',updateOrient);
-window.addEventListener('orientationchange',updateOrient);
+/* iOS fires orientationchange before the new viewport dims are readable — act after they settle */
+window.addEventListener('orientationchange',()=>{ setTimeout(updateOrient,80); setTimeout(updateOrient,400); });
+if(window.visualViewport) window.visualViewport.addEventListener('resize',updateOrient);
 
 document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudio();
   // returning players (who've seen the directive) skip straight to play; first-timers see it once
