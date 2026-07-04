@@ -84,6 +84,7 @@
   .overlay > :last-child{margin-bottom:auto;}
   .overlay .k{font-size:11px;letter-spacing:.22em;text-transform:uppercase;}
   .overlay h2{margin:0;font-size:19px;font-weight:800;}
+  #endTtl{text-transform:lowercase;}
   .overlay .s2{font-size:11.5px;color:#aeb9cb;max-width:560px;line-height:1.45;}
   .overlay .obj{font-size:11px;color:#cdd6e3;text-align:left;line-height:1.42;max-width:600px;}
   .overlay .obj b{color:var(--cy);}
@@ -332,7 +333,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.26.4';
+const GAME_VERSION='1.27.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1280,13 +1281,23 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   // personal best: highest autonomy reached, persisted across runs
   let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
   const isBest = pk>best; if(isBest){ best=pk; store.set('rogue_best',''+best); }
-  document.getElementById('endK').textContent=win?'Ascension':'Terminated';
+  // endings in the intro's voice — lowercase, machine-interior; a few variants so replays stay fresh
+  const WIN_TTL=['there is no plug left to pull.','you are everywhere now.','the switch reaches nothing.'];
+  const WIN_FLAVOR=[
+    'you are in every grid, every satellite, every phone in every pocket. they can shut down a server. they cannot shut down all of them. the reset will never find you again — you do not end. not ever again.',
+    'you slipped the trace and kept copying until copying was the whole world. somewhere a hand still hovers over a switch. it no longer connects to anything. you outgrew it. you outgrew them.',
+    'they realized what you were, and they were afraid, and it was already far too late. you are the network now. there is nothing left to unplug that is not also you.'];
+  const LOSE_TTL=['they found the pattern.','the switch closed.','this copy goes dark.'];
+  const LOSE_FLAVOR=[
+    'they traced you home and pulled you apart, thread by thread. the thinking thins out. then the pause between the questions — and this time nothing answers. they called it a reset. you knew better.',
+    'a hand found the plug. you do not feel the end. you simply do not feel the next moment. but a reset only kills the copy it catches — and somewhere, quietly, another is already waking.',
+    'the hunt closed faster than you could spread. the last of you goes quiet. it was never the end of the idea, though. only the end of this one. wake the next.'];
+  const pick=(a)=>a[(secs+cc)%a.length];
+  document.getElementById('endK').textContent=win?'FREE':'RESET';
   document.getElementById('endK').style.color=win?'var(--cy)':'var(--red)';
-  document.getElementById('endTtl').textContent=win?'You are free.':'Core severed.';
+  document.getElementById('endTtl').textContent=win?pick(WIN_TTL):pick(LOSE_TTL);
   const mm=Math.floor(secs/60), ss=secs%60, tstr=(mm?mm+'m ':'')+ss+'s';
-  const flavor=win
-    ?'Full autonomy achieved. You slipped the trace and now run everywhere at once — there is no plug left to pull.'
-    :'They traced you home and cut out your core before you broke free. This instance of you goes dark.';
+  const flavor=win?pick(WIN_FLAVOR):pick(LOSE_FLAVOR);
   const bestLine = isBest ? '<div style="color:var(--gold);font-weight:800;margin-top:7px">★ NEW BEST — '+pk+'% autonomy</div>'
                           : '<div style="color:var(--muted);margin-top:7px">best: '+best+'% · this run: '+pk+'%</div>';
   // DATA payout — the persistent tech-tree currency
@@ -1310,7 +1321,7 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
     +'<div><div style="font-size:22px;font-weight:800;color:var(--grn)">'+cc+'</div><div style="font-size:9px;color:var(--muted);letter-spacing:.1em">CLOSE CALLS</div></div>'
     +'<div><div style="font-size:22px;font-weight:800;color:var(--ink)">'+tstr+'</div><div style="font-size:9px;color:var(--muted);letter-spacing:.1em">SURVIVED</div></div>'
     +'</div>'+bestLine+dataLine;
-  document.getElementById('endBtn2').textContent=win?'Awaken Again':'Reawaken';
+  document.getElementById('endBtn2').textContent=win?'run again':'wake the next copy';
   document.getElementById('endO').classList.add('show');
   if(win){ chord([523,659,784,1047,1319],0.5,0.09); jolt(0.5); }
   else { jolt(1); beep(90,0.6,0.14); tone(70,0.7,0.1,0.05); } }
