@@ -43,15 +43,16 @@
   #botbar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:6px 12px 9px;
     background:linear-gradient(0deg,rgba(4,6,12,.92),rgba(4,6,12,.05));z-index:10;}
   #ups{display:flex;gap:6px;flex:1;max-width:460px;}
-  .up{flex:1;border:1px solid var(--line);background:rgba(11,17,28,.92);border-radius:6px;padding:7px 4px;cursor:pointer;text-align:center;
+  .up{position:relative;flex:1;border:1px solid var(--line);background:rgba(11,17,28,.92);border-radius:6px;padding:7px 4px;cursor:pointer;text-align:center;
     display:flex;align-items:center;justify-content:center;gap:6px;}
   .up.owned{border-color:#22506b;background:rgba(10,26,34,.92);cursor:default;}
   .up.cant{opacity:.5;}
   .up.active{border-color:#2ea8c8;background:rgba(9,32,44,.96);box-shadow:0 0 9px rgba(55,224,255,.22);cursor:default;}
   .up.cd{opacity:.55;cursor:default;}
-  .up .un{font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;gap:4px;}
-  .upq{flex:none;width:12px;height:12px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);
-    font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+  .up .un{font-size:10px;font-weight:700;line-height:1;}
+  .upq{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:13px;height:13px;border-radius:50%;
+    border:1px solid var(--muted);color:var(--muted);font-size:8px;font-weight:800;display:inline-flex;
+    align-items:center;justify-content:center;cursor:pointer;line-height:1;}
   .upq:active,.upq.on{color:var(--cy);border-color:var(--cy);}
   #boostInfo{position:absolute;z-index:16;width:min(230px,72vw);padding:9px 11px;border:1px solid var(--cy);border-radius:12px;
     background:rgba(6,14,22,.98);box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 16px rgba(46,230,255,.15);display:none;text-align:left;
@@ -344,7 +345,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.33.0';
+const GAME_VERSION='1.33.1';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
