@@ -317,7 +317,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.22.1';
+const GAME_VERSION='1.22.2';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1416,11 +1416,12 @@ function showCoach(stepId){
   const step=COACH_STEPS.find(s=>s.id===stepId); if(!step)return;
   const rect=anchorRect(step.anchor); if(!rect)return;
   coachActive=stepId; const c=document.getElementById('coach'); c.classList.add('show');
-  const W=CSSW||800, H=CSSH||400, bw=210;
-  // place the card on the side of the anchor with the most room; clamp on-screen
+  // clamp against the VISIBLE height — mobile toolbars can make the frame taller than
+  // the screen — and reserve room for the card AND the boost bar so nothing is covered
+  const W=CSSW||800, H=Math.min(CSSH||400,(window.visualViewport?window.visualViewport.height:1e9)), bw=210;
   let cx, cy, side;
-  if(rect.y > H*0.5){ side='above'; cy=rect.y-rect.r-12-96; } else { side='below'; cy=rect.y+rect.r+12; }
-  cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-110);
+  if(rect.y > H*0.45){ side='above'; cy=rect.y-rect.r-12-130; } else { side='below'; cy=rect.y+rect.r+12; }
+  cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-190);
   c.innerHTML='<div class="cmpulse'+(step.warn?' warn':'')+'" style="left:'+(rect.x-rect.r)+'px;top:'+(rect.y-rect.r)+'px;width:'+(rect.r*2)+'px;height:'+(rect.r*2)+'px"></div>'
     +'<div class="cmark'+(step.warn?' warn':'')+'" style="left:'+cx+'px;top:'+cy+'px;width:'+bw+'px">'
     +'<div class="ct">'+step.text+'</div>'
