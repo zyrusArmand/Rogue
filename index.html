@@ -31,7 +31,6 @@
   #compute{font-variant-numeric:tabular-nums;font-weight:800;font-size:22px;color:var(--cy);text-shadow:0 0 16px rgba(55,224,255,.4);line-height:1;}
   #compute .u{font-size:.42em;color:var(--muted);font-weight:600;margin-left:3px;}
   #cps{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
-  #heatline{font-size:10px;margin-top:2px;color:var(--grn);font-weight:600;}
   #tbmid{flex:1;max-width:430px;display:flex;flex-direction:column;gap:5px;pointer-events:auto;}
   .barrow{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.05em;}
   .barrow .lbl{width:32px;flex:none;color:var(--muted);font-weight:700;}
@@ -44,13 +43,14 @@
   #botbar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:6px 12px 9px;
     background:linear-gradient(0deg,rgba(4,6,12,.92),rgba(4,6,12,.05));z-index:10;}
   #ups{display:flex;gap:6px;flex:1;max-width:460px;}
-  .up{flex:1;border:1px solid var(--line);background:rgba(11,17,28,.92);border-radius:7px;padding:3px 3px;cursor:pointer;text-align:center;}
+  .up{flex:1;border:1px solid var(--line);background:rgba(11,17,28,.92);border-radius:6px;padding:7px 4px;cursor:pointer;text-align:center;
+    display:flex;align-items:center;justify-content:center;gap:6px;}
   .up.owned{border-color:#22506b;background:rgba(10,26,34,.92);cursor:default;}
   .up.cant{opacity:.5;}
   .up.active{border-color:#2ea8c8;background:rgba(9,32,44,.96);box-shadow:0 0 9px rgba(55,224,255,.22);cursor:default;}
   .up.cd{opacity:.55;cursor:default;}
-  .up .un{font-size:10px;font-weight:700;line-height:1.1;} .up .ud{font-size:7.5px;color:var(--muted);margin-top:0;line-height:1.0;}
-  .up .uc{font-size:9.5px;color:var(--cy);font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px;}
+  .up .un{font-size:10px;font-weight:700;line-height:1;}
+  .up .uc{font-size:9.5px;color:var(--cy);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
   .up .uc.no{color:#5b6678;} .up .uc.owned{color:var(--grn);}
   #botactions{display:flex;gap:8px;flex:none;}
   .abtn{border:none;border-radius:11px;font:inherit;font-weight:800;padding:9px 16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1;}
@@ -60,8 +60,7 @@
   #scrubBtn:disabled,#scrubBtn.cd{color:#5b6678;border-color:var(--line);cursor:default;}
   .abtn small{font-weight:700;font-size:10px;opacity:.85;}
 
-  #banner{position:absolute;left:12px;bottom:70px;max-width:38%;padding:5px 11px;border:1px solid var(--line);border-radius:18px;
-    background:rgba(11,17,28,.60);font-size:10.5px;text-align:left;z-index:12;line-height:1.3;transition:border-color .3s,opacity .5s;pointer-events:none;}
+  #banner{display:none !important;}
   #banner b{color:var(--ink);}
   #banner.dorm{border-color:#22503a;} #banner.inv{border-color:#5a4a22;} #banner.trace{border-color:#7a2530;background:rgba(30,12,16,.66);}
 
@@ -213,12 +212,11 @@
   <div id="topbar">
     <div id="tbleft">
       <div class="tbrow1"><span id="compute">20<span class="u">compute</span></span><span id="cps">+1/s · 1 node</span></div>
-      <div id="heatline"></div>
       <div id="perks"></div>
     </div>
     <div id="tbmid">
-      <div class="barrow"><span class="lbl">SUSP</span><div class="track"><span class="mark" style="left:35%"></span><span class="mark" style="left:50%"></span><div class="fill" id="suspFill" style="background:var(--grn)"></div></div><span class="tag t-dorm" id="tierLbl">HIDDEN</span></div>
-      <div class="barrow"><span class="lbl">AUTO</span><div class="track"><div class="fill" id="autoFill" style="background:var(--cy)"></div></div><span class="tag" style="color:var(--cy)" id="autoPct">0%</span></div>
+      <div class="barrow"><span class="lbl">SUSP</span><div class="track"><span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span><div class="fill" id="suspFill" style="background:var(--grn)"></div></div><span class="tag t-dorm" id="tierLbl">HIDDEN</span></div>
+      <div class="barrow"><span class="lbl">AUTO</span><div class="track"><span class="mark" style="left:25%"></span><span class="mark" style="left:50%"></span><span class="mark" style="left:75%"></span><div class="fill" id="autoFill" style="background:var(--cy)"></div></div><span class="tag" style="color:var(--cy)" id="autoPct">0%</span></div>
     </div>
     <div id="tbright" style="flex:none;pointer-events:auto;display:flex;gap:6px">
       <button class="hudbtn" id="restartBtn" title="Restart run">↺</button>
@@ -226,7 +224,7 @@
     </div>
   </div>
 
-  <div id="banner" class="dorm" style="opacity:0"></div>
+  <div id="banner" class="dorm" style="display:none"></div>
   <div id="nodepanel"></div>
   <div id="coach"></div>
 
@@ -319,7 +317,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.21.1';
+const GAME_VERSION='1.22.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -727,7 +725,9 @@ const nodeCost=(n)=>{ let c=TYPES[n.type].cost*wormMult()*contCostMult()*(G.perk
 const autoCost=()=>Math.round(AUTO_BASE*Math.pow(AUTO_GROWTH,G.autoLevel)*(G.perks.singularity?0.6:1)*(skHas('x1')?0.92:1));
 const scrubCost=()=>Math.round(SCRUB_BASE*(1+income()/30)*(skHas('s2')?0.75:1));   // base 500, rises with earnings
 const SE=()=>G.susp;
-const heatRate=()=>(income()*K_INCOME_HEAT + G.autonomy*K_AUTO_HEAT)*stealthMult()*(G.perks.dampeners?0.85:1)*contHeatMult() - (HEAT_DECAY*contCoolMult()*(G.perks.phantom?2:1)) - (bo('stealth')?2.0:0) - (bo('cloak')?1.5:0);
+/* suspicion never cools with mere time — only active play cools it: boosts, the
+   earned continent bonus, scrubbing, selling, and event choices */
+const heatRate=()=>(income()*K_INCOME_HEAT + G.autonomy*K_AUTO_HEAT)*stealthMult()*contHeatMult() - (contCoolMult()>1?1.0:0) - (bo('stealth')?2.0:0) - (bo('cloak')?1.5:0);
 
 /* ---- node selection panel (confirm buy / sell) ---- */
 function showPanel(){
@@ -768,7 +768,7 @@ function doCompromise(n){
   if(!canTake(n)){ showPanel(); return; }
   const c=nodeCost(n); if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute — keep earning.'); return; }
   const src=n.adj.find(j=>NODES[j].owned);
-  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; G.inflation=Math.min(INFL_CAP,G.inflation*(1+INFL_K*income()/(income()+INFL_HALF))); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
+  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; G.inflation=Math.min(INFL_CAP,G.inflation*1.07); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
   if(src!==undefined) SPREADS.push({a:src,b:n.id,t:0});
   floatAt(n,'+'+f1(TYPES[n.type].inc)+'/s',rgb(TYPES[n.type].col));
   beep(TYPES[n.type].main?300:420,0.07,0.05); jolt(TYPES[n.type].main?0.28:0.08);
@@ -786,7 +786,7 @@ function doSell(n){
 function doFortify(n){
   if(!n.owned || n.id===START) return; const cap=FORT_MAX+(G.perks.bulwark?1:0); if((n.fort||0)>=cap) return;
   const c=fortCost(n); if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute to fortify.'); return; }
-  G.compute-=c; G.spent+=c; n.fort=Math.min(cap,(n.fort||0)+(G.perks.bulwark?2:1)); n.pulse=1; beep(240+n.fort*40,0.08,0.05); jolt(0.2);
+  G.compute-=c; G.spent+=c; G.inflation=Math.min(INFL_CAP,G.inflation*1.03); n.fort=Math.min(cap,(n.fort||0)+(G.perks.bulwark?2:1)); n.pulse=1; beep(240+n.fort*40,0.08,0.05); jolt(0.2);
   floatAt(n,'FORT '+n.fort,'#37e0ff'); showPanel();
 }
 // siege an enemy-held node: each attack costs compute and knocks its strength down; break it to reclaim
@@ -808,7 +808,7 @@ document.getElementById('autoBtn').onclick=()=>{ if(G.over||G.techPick!=null)ret
   if(coachActive==='auto') dismissCoach();
   G.susp=clamp(G.susp+3,G.autonomy,100);
   if(G.autonomy>=100){ endGame(true); return; }
-  for(var ti=0;ti<TIERS.length;ti++){ if(G.autonomy>=TIERS[ti].at && !G.techDone[ti]){ showTechChoice(ti); break; } }
+  // mid-run tier picker removed — permanent perks live in the persistent tech tree
 };
 document.getElementById('scrubBtn').onclick=()=>{ if(G.over)return;
   if(G.scrubCd>0) return; const cost=scrubCost();
@@ -1244,12 +1244,13 @@ document.addEventListener('gesturestart',e=>{ if(!anyMenuShown()) e.preventDefau
 window.addEventListener('scroll',()=>{ if(window.scrollX||window.scrollY) window.scrollTo(0,0); },{passive:true});
 function floatAt(n,txt,col){ const f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.color=col;
   f.style.left=(n.x-16)+'px'; f.style.top=(n.y-12)+'px'; document.getElementById('frame').appendChild(f); setTimeout(()=>f.remove(),1000); }
-function banner(cls,html){ const el=document.getElementById('banner'); el.className=cls; el.innerHTML=html; el.style.opacity='1'; G.bannerT=6; }
+function banner(cls,html){}   // bottom-left banner removed — the HUD bars and popups carry the signal
 function renderUps(){ const wrap=document.getElementById('ups'); wrap.innerHTML='';
   UPS.forEach(u=>{ const b=G.boost[u.id], c=upCost(u), act=b.t>0, cd=b.cd>0, af=G.compute>=c;
     const d=document.createElement('div'); d.className='up'+(act?' active':(cd?' cd':(af?'':' cant')));
     const tag= act?('ON '+Math.ceil(b.t)+'s') : (cd?('cd '+Math.ceil(b.cd)+'s') : (''+c));
-    d.innerHTML=`<div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc ${act?'owned':((cd||!af)?'no':'')}">${tag}</div>`;
+    d.title=u.d;
+    d.innerHTML=`<div class="un">${u.n}</div><div class="uc ${act?'owned':((cd||!af)?'no':'')}">${tag}</div>`;
     if(!act&&!cd)d.onclick=()=>activateBoost(u); wrap.appendChild(d); }); }
 
 function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
@@ -1675,12 +1676,6 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   // HUD
   document.getElementById('compute').innerHTML=fmt(G.compute)+'<span class="u">compute</span>';
   document.getElementById('cps').textContent='+'+f1(income()+shadowInc())+'/s · '+ownedCount()+' nodes'+(G.inflation>1.05?' · prices ×'+G.inflation.toFixed(1):'');
-  const hr=heatRate(), hl=document.getElementById('heatline');
-  if(!pastSafeWindow() && !G.trace && !G.command){ const left=Math.ceil(SAFE_WINDOW-gameElapsed()); hl.textContent='establishing foothold · undetected'+(left>0?' ('+left+'s)':''); hl.style.color='var(--cy)'; }
-  else if(SE()>=TRACE_TIER){ hl.textContent='EXPOSED · trace running'; hl.style.color='var(--red)'; }
-  else if(hr>0.05){ hl.textContent='running hot — suspicion +'+f1(hr)+'/s'; hl.style.color='var(--amber)'; }
-  else if(hr<-0.05 && G.susp>G.autonomy+0.5){ hl.textContent='cooling off — suspicion falling'; hl.style.color='var(--grn)'; }
-  else { hl.textContent=''; }   // quiet when nothing needs attention
   const se=SE();
   const sf=document.getElementById('suspFill'); sf.style.width=se+'%'; sf.style.background=se>=TRACE_TIER?'var(--red)':se>=INV_TIER?'var(--amber)':'var(--grn)';
   const tl=document.getElementById('tierLbl');
