@@ -155,6 +155,11 @@
     42%{opacity:1;}
     46%{top:calc(100% - 4px);opacity:0;}
     100%{top:calc(100% - 4px);opacity:0;}}
+  #rotate{display:none;position:absolute;inset:0;z-index:50;background:#04060c;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
+  #rotate .ic{font-size:46px;animation:spin 2.6s ease-in-out infinite;}
+  #rotate .rt{font-size:17px;font-weight:800;}
+  #rotate .sub{color:var(--muted);font-size:12.5px;}
+  @keyframes spin{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
   .overlay button.mbtn::before,.overlay button.mbtn::after{display:none;}
@@ -263,6 +268,8 @@
     <button id="endBtn2">Reawaken</button>
   </div>
 
+  <div id="rotate"><div class="ic">↻</div><div class="rt">Rotate your device</div><div class="sub">ROGUE plays in landscape</div></div>
+
 </div></div>
 
 <script>
@@ -272,8 +279,8 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.14.0';
-let ROT=false; // gameplay is rendered rotated 90° on portrait screens
+const GAME_VERSION='1.15.0';
+const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
    shift the whole frame sideways. Pin it. */
@@ -1285,7 +1292,7 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack || G.menuPause){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
@@ -1373,7 +1380,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
   const btns=techEl.querySelectorAll('.techopt'); for(let i=0;i<btns.length;i++){ btns[i].onclick=(function(idx){ return function(){ chooseTech(ti,idx); }; })(i); }
 }
 function chooseTech(ti,oi){ const o=TIERS[ti].opts[oi]; o.apply(); G.techDone[ti]=o.key; G.techPick=null; if(techEl) techEl.style.display='none'; chord([440,554,659],0.18,0.06); }
-function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause) dt=0;
+function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause||G.rotGate) dt=0;
   if(!CSSW) layout();
   if(!G.over && CSSW){
     for(const k of ['discountT','surgeT','freezeT','auditT','calmT','dampT']){ if(G.fx[k]>0) G.fx[k]=Math.max(0,G.fx[k]-dt); }
@@ -1562,21 +1569,14 @@ function hideAllOverlays(){ ['homeO','loadoutO','missionO','howO','endO'].forEac
 function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps();
   try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort native lock; CSS rotation covers the rest
   updateOrient(); }
-/* gameplay always renders landscape: on portrait screens the frame is rotated 90°.
-   Menus stay in the device's natural orientation. */
+/* gameplay is landscape-only: in portrait mid-run, show the rotate screen and pause.
+   Menus (home, how-to, loadout, briefing, end) work in any orientation. */
 function anyMenuShown(){ return ['homeO','loadoutO','missionO','howO','endO'].some(id=>document.getElementById(id).classList.contains('show')); }
-let rotW=0,rotH=0;
 function updateOrient(){
   const portrait=window.innerHeight>window.innerWidth;
-  const want=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
-  const w=window.innerHeight, h=window.innerWidth;
-  if(want && (!ROT || w!==rotW || h!==rotH)){
-    rotW=w; rotH=h; ROT=true;
-    frameEl.style.cssText='width:'+w+'px;height:'+h+'px;top:0;left:'+h+'px;right:auto;bottom:auto;transform:rotate(90deg);transform-origin:left top;-webkit-backface-visibility:hidden;backface-visibility:hidden;';
-    layout();
-  } else if(!want && ROT){
-    ROT=false; rotW=rotH=0; frameEl.removeAttribute('style'); layout();
-  }
+  const gate=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
+  document.getElementById('rotate').style.display=gate?'flex':'none';
+  if(typeof G!=='undefined'&&G) G.rotGate=gate;
 }
 window.addEventListener('resize',updateOrient);
 /* iOS fires orientationchange before the new viewport dims are readable — act after they settle */
