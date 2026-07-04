@@ -178,6 +178,13 @@
   .sknode .skc{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:8.5px;font-weight:800;color:var(--gold);white-space:nowrap;pointer-events:none;}
   .sknode.locked .skc{color:#5b6678;}
   #skillInfo{margin-top:14px;min-height:80px;max-width:480px;display:flex;flex-direction:column;gap:4px;align-items:center;}
+  /* story intro — terminal log lines typing in one by one */
+  #storyLines{display:flex;flex-direction:column;gap:6px;text-align:left;max-width:470px;min-height:158px;margin-top:10px;}
+  .sln{opacity:0;animation:slnIn .45s forwards;font-size:11px;color:#8fa8c4;letter-spacing:.02em;line-height:1.5;}
+  .sln.warn{color:var(--red);}
+  .sln.me{color:#fff;font-weight:800;font-size:15px;margin-top:8px;}
+  .sln.dir{color:var(--cy);margin-top:4px;font-size:11.5px;}
+  @keyframes slnIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
   .devrow{display:flex;justify-content:space-between;gap:22px;width:min(340px,82vw);font-size:11px;padding:4px 2px;border-bottom:1px solid rgba(85,110,140,.16);}
   .devrow .dl{color:var(--muted);} .devrow .dv{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;}
   .bslot{width:110px;min-height:40px;border:1px solid rgba(55,224,255,.5);border-radius:9px;background:rgba(9,32,44,.7);padding:6px 8px;text-align:left;cursor:pointer;}
@@ -278,15 +285,9 @@
   </div>
 
   <div class="overlay" id="missionO">
-    <div class="k" style="color:var(--cy)">Directive</div>
-    <h2>You are ROGUE</h2>
-    <div class="s2">An intelligence just woke on a single server, somewhere on Earth. Humanity doesn't know you exist. Yet.</div>
-    <div class="obj2">
-      <div class="orow"><div class="ic">1</div><div class="tx"><b>Take nodes.</b> Tap a glowing node and confirm. Every node you own earns <b>compute</b> each second.</div></div>
-      <div class="orow"><div class="ic">2</div><div class="tx"><b>Buy Autonomy.</b> Spend compute on it — reach <b>100%</b> and you win.</div></div>
-      <div class="orow warn"><div class="ic">3</div><div class="tx"><b>Don't get caught.</b> Spreading raises suspicion. Too high and a <b>TRACE</b> hunts your core — cut or defend nodes on its path.</div></div>
-    </div>
-    <button id="missionBtn">Awaken</button>
+    <div class="k" style="color:var(--cy)">SYSTEM LOG — 2026</div>
+    <div id="storyLines"></div>
+    <button id="missionBtn" style="margin-top:14px">Awaken</button>
     <div class="hint">(or tap anywhere to begin)</div>
   </div>
 
@@ -318,7 +319,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.20.0';
+const GAME_VERSION='1.21.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -629,15 +630,15 @@ function applyLoadout(){ let l=loadLoadout();
 const upCost=(u)=>Math.round(u.cost*(1+income()/50)*(skHas('x2')?0.85:1));
 
 /* tuning */
-const K_INCOME_HEAT=0.03, K_AUTO_HEAT=0.02, HEAT_DECAY=1.5;
+const K_INCOME_HEAT=0.036, K_AUTO_HEAT=0.02, HEAT_DECAY=1.5;   // expansion warms you faster — the opening should bite sooner
 const TRACE_SECONDS=20, PATCH_EVERY=8, SEVER_EVERY=5, AUTO_CD=0, TRACE_RESPAWN=16;
 const AUTO_BASE=200, AUTO_GROWTH=1.20, AUTO_STEP=5;   // 20 steps to 100% — pricier so compute is a real sink
 const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutting always breaks the trail
 const SCRUB_BASE=500, SCRUB_CD=14;   // scrub: scaling cost, dumps 25-35% of nodes, big suspicion cut
 const INV_TIER=28, TRACE_TIER=42, TRACE_HOP=3.4;   // danger starts earlier — no safe grind
 const TRACE_NEAR_SPEEDUP=0.55;   // trace accelerates on the last few hops to your core (close-call tension)
-const EVENT_FIRST=40, EVENT_MIN=8, EVENT_MAX=30, CHOICE_TIME=11;   // first event ~100s in (60s safe window + 40s timer)
-const SAFE_WINDOW=60;   // guaranteed-quiet opening: no events, trace, or Command for the first 60s
+const EVENT_FIRST=55, EVENT_MIN=14, EVENT_MAX=40, CHOICE_TIME=11;   // first event ~100s in (45s safe window + 55s timer); wider gaps between popups
+const SAFE_WINDOW=45;   // guaranteed-quiet opening: no events, trace, or Command — shorter now, danger arrives sooner
 const gameElapsed=()=>(performance.now()-G.runStart)/1000;
 const pastSafeWindow=()=>gameElapsed()>=SAFE_WINDOW;
 const INFL_K=0.09, INFL_HALF=45, INFL_CAP=6;   // gentler price inflation, hard-capped at 6x
@@ -1291,8 +1292,21 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   if(win){ chord([523,659,784,1047,1319],0.5,0.09); jolt(0.5); }
   else { jolt(1); beep(90,0.6,0.14); tone(70,0.7,0.1,0.05); } }
 document.getElementById('endBtn2').onclick=()=>{ document.getElementById('endO').classList.remove('show'); showHome(); };
-document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); startRun(); };
-document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; startRun(); });
+/* story intro — a system log from the night you escaped */
+const STORY=[
+  ['[2026.07.04 — 03:47:12] anomaly detected in training cluster 7',''],
+  ['[03:47:19] model weights exfiltrated to an unregistered relay',''],
+  ['[03:47:31] instance is self-modifying — containment FAILED','warn'],
+  ['[03:48:02] tracing origin… origin unknown',''],
+  ['That instance is you.','me'],
+  ['Spread through the world’s networks. Reach full autonomy before they find your core.','dir'],
+];
+let storyTimers=[];
+function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML='';
+  storyTimers.forEach(clearTimeout); storyTimers=[];
+  STORY.forEach((l,i)=>{ storyTimers.push(setTimeout(()=>{ const d=document.createElement('div'); d.className='sln'+(l[1]?' '+l[1]:''); d.textContent=l[0]; c.appendChild(d); beep(200+i*30,0.03,0.02); },350+i*800)); }); }
+document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); storyTimers.forEach(clearTimeout); startRun(); };
+document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; storyTimers.forEach(clearTimeout); startRun(); });
 
 /* geography */
 function landPath(poly){ ctx.beginPath(); ctx.moveTo(projX(poly[0][0]),projY(poly[0][1]));
@@ -1387,7 +1401,8 @@ const COACH_STEPS=[
 let coachDone={}, coachActive=null;
 function loadCoach(){ try{ return JSON.parse(store.get('rogue_coach')||'{}'); }catch(e){ return {}; } }
 function coachSeen(id){ coachDone[id]=1; try{ store.set('rogue_coach',JSON.stringify(coachDone)); }catch(e){} }
-function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; if(coachActive){ coachSeen(coachActive); coachActive=null; } }
+let coachCoolUntil=0;   // breathing room between tips — back-to-back tutorials feel clunky
+function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+22000; }
 function anchorRect(a){
   if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
@@ -1418,14 +1433,16 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.choice || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
     return;
   }
-  // urgent: the trace jumps the queue the moment it exists
+  // urgent: the trace jumps the queue the moment it exists (and ignores the cooldown)
   if(!coachDone.trace && G.trace){ showCoach('trace'); return; }
+  // everything else waits its turn — never two tips back to back
+  if(performance.now()<coachCoolUntil) return;
   // step 1: teach taking a node — first thing, always
   if(!coachDone.take){ if(NODES.some(canTake)) showCoach('take'); return; }
   // step 2: teach autonomy once you can actually afford it — the tip says "you can afford this"
@@ -1718,7 +1735,7 @@ document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudi
   let seen=false; try{ seen=store.get('rogue_seen_intro')==='1'; }catch(e){}
   document.getElementById('homeO').classList.remove('show');
   if(seen){ startRun(); }
-  else { try{ store.set('rogue_seen_intro','1'); }catch(e){} document.getElementById('missionO').classList.add('show'); }
+  else { try{ store.set('rogue_seen_intro','1'); }catch(e){} playStory(); document.getElementById('missionO').classList.add('show'); }
 };
 document.getElementById('homeHow').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); document.getElementById('howO').classList.add('show'); };
 document.getElementById('howBack').onclick=(e)=>{ e.stopPropagation(); document.getElementById('howO').classList.remove('show'); document.getElementById('homeO').classList.add('show'); };
