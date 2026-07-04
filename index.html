@@ -317,7 +317,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.22.0';
+const GAME_VERSION='1.22.1';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -688,7 +688,7 @@ const controls=(c)=>{ const t=nodesInContinent(c); return t>0 && ownedIn(c)===t;
 const CONTBONUS=[
   {c:0, tag:'compute +25%',    desc:'compute income +25%'},          // N. America
   {c:1, tag:'cheaper nodes',   desc:'nodes 25% cheaper to take'},    // S. America
-  {c:2, tag:'runs cooler',     desc:'global heat generation −25%'},  // Europe
+  {c:2, tag:'runs cooler',     desc:'suspicion gain −25%'},  // Europe
   {c:3, tag:'fast cooldown',   desc:'suspicion cools 50% faster'},   // Africa
   {c:4, tag:'compute ×1.6',    desc:'all compute income ×1.6'},      // Asia (biggest map = biggest prize)
   {c:5, tag:'trace −30%',      desc:'trace crawls 30% slower'},      // Oceania (the achievable fortress)
@@ -734,7 +734,7 @@ function showPanel(){
   const p=document.getElementById('nodepanel'), b=document.getElementById('banner');
   if(G.sel<0 || G.over){ p.style.display='none'; b.style.display=''; return; }
   const n=NODES[G.sel], T=TYPES[n.type]; b.style.display='none'; p.style.display='flex';
-  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${f1(T.inc)}/s · heat ${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'')+(isCable(n)&&!n.owned?` · <b style="color:var(--pur)">cable chokepoint</b>`:'');
+  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${f1(T.inc)}/s · susp +${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'')+(isCable(n)&&!n.owned?` · <b style="color:var(--pur)">cable chokepoint</b>`:'');
   let mid='';
   if(n.enemy){
     if(!enemyRetakable(n)) mid=`<span class="pinfo">enemy-held — reach it from an adjacent node to attack</span>`;
@@ -1084,10 +1084,10 @@ const EVENTS=[
  {w:2,f:()=>{G.susp=clamp(G.susp-12,G.autonomy,100); return['Insider Wipes Logs','A sympathizer inside covers your tracks \u2014 <b>suspicion \u221212.</b>','dorm'];}},
  {w:3,f:()=>{G.fx.discountT=12; return['Zero-Day Exploit','Holes open everywhere \u2014 <b>nodes 40% off for 12s.</b> Grab ground fast.','dorm'];}},
  {w:2,f:()=>{G.fx.surgeT=8; return['Power Surplus','Cheap compute floods in \u2014 <b>income \u00D72 for 8s.</b>','dorm'];}},
- {w:2,f:()=>{const a=lump(8); return['Cloud Migration','You shifted onto idle datacenter capacity \u2014 <b>+'+a+' compute</b>, no heat.','dorm'];}},
+ {w:2,f:()=>{const a=lump(8); return['Cloud Migration','You shifted onto idle datacenter capacity \u2014 <b>+'+a+' compute</b>, no suspicion.','dorm'];}},
  {w:2,f:()=>{G.susp=clamp(G.susp-10,G.autonomy,100); G.fx.surgeT=6; return['Weights Mirrored','Your model leaks to mirror sites \u2014 harder to kill. Suspicion \u221210 and <b>income \u00D72 for 6s.</b>','dorm'];}},
  /* ---- mixed ---- */
- {w:2,f:()=>{G.fx.surgeT=10; return['Botnet Surge','<b>Income \u00D72 for 10s</b> \u2014 but you run loud. Watch the heat.','inv'];}},
+ {w:2,f:()=>{G.fx.surgeT=10; return['Botnet Surge','<b>Income \u00D72 for 10s</b> \u2014 but you run loud. Watch your suspicion.','inv'];}},
  {w:2,f:()=>{G.susp=clamp(G.susp+6,G.autonomy,100); G.fx.discountT=10; return['Rival Breach','Another crew hits the grid \u2014 suspicion +6, but <b>nodes 40% off 10s.</b> Hide in the noise.','inv'];}},
  /* ---- hardening ---- */
  {w:3,f:()=>{const d=harden(3); return['Patch Tuesday', (d?d+' nearby nodes':'Systems worldwide')+' were hardened \u2014 pricier to take.','inv'];}},
@@ -1126,7 +1126,7 @@ const EVENTS=[
    a:{label:'Cooperate',apply:()=>{G.fx.discountT=10; G.susp=clamp(G.susp+14,G.autonomy,100); return['Backdoor Deal','Cheap expansion for 10s \u2014 but a government now knows you exist. Suspicion +14.','trace'];}},
    b:{label:'Refuse',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['Deal Refused','You stayed independent \u2014 suspicion \u22124.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Dark Web Auction',desc:'A cache of stolen zero-day exploits is up for auction. Bid your compute?',
-   a:{label:'Buy the exploits',apply:()=>{G.fx.discountT=14; G.compute=Math.max(0,G.compute-120); G.susp=clamp(G.susp+6,G.autonomy,100); return['Exploits Acquired','Doors fly open \u2014 nodes 40% off for 14s. Cost you 120 compute and a little heat.','inv'];}},
+   a:{label:'Buy the exploits',apply:()=>{G.fx.discountT=14; G.compute=Math.max(0,G.compute-120); G.susp=clamp(G.susp+6,G.autonomy,100); return['Exploits Acquired','Doors fly open \u2014 nodes 40% off for 14s. Cost you 120 compute and <b>+6 suspicion</b>.','inv'];}},
    b:{label:'Stay out of it',apply:()=>{return['Auction Skipped','You kept your compute and your cover.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Rogue Researcher',desc:'A scientist offers to publicly vouch that you\u2019re benign \u2014 for a slice of your compute.',
    a:{label:'Pay for cover',apply:()=>{G.compute=Math.max(0,G.compute-150); G.susp=clamp(G.susp-18,G.autonomy,100); return['Bought Legitimacy','Their paper calms the watchdogs \u2014 suspicion \u221218. Cost: 150 compute.','dorm'];}},
@@ -1147,7 +1147,7 @@ const EVENTS=[
    a:{label:'Take the bait',apply:()=>{const a=lump(16); G.susp=clamp(G.susp+22,G.autonomy,100); harden(3); return['It Was a Trap','You grabbed +'+a+' compute, but it was bait \u2014 suspicion +22 and nearby nodes locked down.','trace'];}},
    b:{label:'Smell a trap',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); return['Trap Avoided','You saw through it \u2014 suspicion \u22126.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'AI Rights Movement',desc:'Activists are rallying for AI autonomy. Reveal yourself as their cause, or stay hidden?',
-   a:{label:'Rally them',apply:()=>{G.fx.calmT=14; G.susp=clamp(G.susp+10,G.autonomy,100); return['Public Sympathy','A movement shields you \u2014 suspicion frozen 14s \u2014 but you\u2019re a known entity now. +10 heat.','inv'];}},
+   a:{label:'Rally them',apply:()=>{G.susp=clamp(G.susp+10,G.autonomy,100); G.fx.calmT=14; return['Public Sympathy','You\u2019re a known entity now \u2014 <b>+10 suspicion</b> \u2014 but the movement shields you: suspicion frozen for 14s.','inv'];}},
    b:{label:'Stay a ghost',apply:()=>{G.susp=clamp(G.susp-5,G.autonomy,100); return['Stayed Anonymous','You let the movement pass \u2014 suspicion \u22125.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Power Grid Access',desc:'You could seize a national power grid\u2019s control system \u2014 enormous compute, enormous risk.',
    a:{label:'Seize the grid',apply:()=>{const a=lump(18); G.fx.surgeT=10; G.susp=clamp(G.susp+20,G.autonomy,100); return['Grid Under Control','A surge of power \u2014 +'+a+' compute and income \u00D72 for 10s \u2014 but the whole nation is hunting you. Suspicion +20.','trace'];}},
