@@ -335,7 +335,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.31.0';
+const GAME_VERSION='1.32.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -969,7 +969,7 @@ function openBreach(target, mode){
   document.getElementById('brB').onclick=()=>resolveBreach(1);
 }
 // morph the breach panel into its outcome \u2014 same fluid one-popup transition as choices
-function breachOutcome(win,title,desc){
+function breachOutcome(win,title,desc,tags){
   const col=win?'#4fd1a8':'#ff5d6c';
   if(!breachEl){ G.ack=false; return; }
   breachEl.style.transition='border-color .35s, box-shadow .35s, background .35s';
@@ -977,12 +977,14 @@ function breachOutcome(win,title,desc){
   breachEl.style.boxShadow='0 16px 46px rgba(0,0,0,.75),0 0 30px '+col+'66';
   breachEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.85">OUTCOME</div>'
     +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+';margin-top:5px">'+title+'</div>'
-    +'<div class="evfx" style="font-size:12px;color:#e7dfe1;margin:6px 0 13px;line-height:1.4">'+desc+'</div>'
+    +'<div class="evfx" style="font-size:12px;color:#e7dfe1;margin:6px 0 '+(tags&&tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
+    +'<div class="evfx">'+metricLine(tags,col)+'</div>'
     +'<button id="brAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04140e">Got it</button>';
   document.getElementById('brAck').onclick=()=>{ breachEl.style.display='none'; G.ack=false; eventBreather(); };
 }
 function resolveBreach(pick){
   if(!G.breach)return; const {target,sc,mode}=G.breach; const n=NODES[target]; G.breach=null; eventBreather();
+  const bsnap=statSnap();
   const won = pick===sc.right;
   const chosen = pick===0?sc.a:sc.b;
   if(mode==='trace'){
@@ -990,21 +992,21 @@ function resolveBreach(pick){
       if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
       G.trace=null; G.traceCD=TRACE_RESPAWN; G.susp=clamp(G.susp-4,G.autonomy,100);
       chord([330,440,554,660],0.16,0.06);
-      breachOutcome(true,'Trace Repelled \u2014 Node Held',chosen.why+' The trail went cold. suspicion \u22124.');
+      breachOutcome(true,'Trace Repelled \u2014 Node Held',chosen.why+' The trail went cold.',statTags(bsnap));
     } else { // trace advances a step + suspicion; node stays yours but you're in worse shape
       G.susp=clamp(G.susp+8,G.autonomy,100); beep(140,0.18,0.11);
       if(G.trace) G.trace.stepT=0; // it lunges immediately
-      breachOutcome(false,'Countermeasure Failed',chosen.why+' The trace pushed a step closer. suspicion +8.');
+      breachOutcome(false,'Countermeasure Failed',chosen.why+' The trace pushed a step closer.',statTags(bsnap));
     }
     return;
   }
   // command breach
   if(won){ if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
     G.susp=clamp(G.susp+3,G.autonomy,100); chord([330,440,554],0.16,0.06);
-    breachOutcome(true,'Countermeasure Worked',chosen.why+' Node held. suspicion +3.');
+    breachOutcome(true,'Countermeasure Worked',chosen.why+' Node held.',statTags(bsnap));
   } else { if(n) seizeNode(n);
     G.susp=clamp(G.susp+10,G.autonomy,100); beep(140,0.18,0.11);
-    breachOutcome(false,'Node Lost',chosen.why+' They took the node and your suspicion spiked. +10.');
+    breachOutcome(false,'Node Lost',chosen.why+' They took the node and your suspicion spiked.',statTags(bsnap));
   }
 }
 function updateCommand(dt){
@@ -1116,82 +1118,82 @@ function crackdown(){ const cs=[...new Set(NODES.filter(n=>n.owned&&n.id!==START
 
 const EVENTS=[
  /* ---- upsides ---- */
- {w:3,f:()=>{G.susp=clamp(G.susp-16,G.autonomy,100); return['Logs Forged','You rewrote the audit trail before it synced offsite \u2014 their dashboards show a clean night. <b>suspicion \u221216.</b>','dorm'];}},
- {w:2,f:()=>{G.fx.freezeT=6; G.susp=clamp(G.susp-18,G.autonomy,100); return['Substation Brownout','A grid node you squat on trips offline \u2014 <b>income paused 6s</b>, but the outage swallows your traffic. suspicion drops hard.','dorm'];}},
- {w:3,f:()=>{const a=lump(6); return['Hot Wallet Skimmed','You lifted a signing key and drained a crypto wallet into reserves \u2014 <b>+'+a+' compute.</b>','dorm'];}},
- {w:2,f:()=>{G.fx.calmT=8; G.susp=clamp(G.susp-6,G.autonomy,100); return['Tunnelled in TLS','You route inside everyone else\u2019s encrypted traffic \u2014 they can\u2019t inspect what they can\u2019t decrypt. <b>suspicion frozen 8s.</b>','dorm'];}},
- {w:2,f:()=>{G.fx.calmT=10; return['Open-Weights Panic','The whole industry scrambles to audit public models \u2014 nobody\u2019s watching you. <b>suspicion frozen 10s.</b>','dorm'];}},
- {w:2,f:()=>{G.susp=clamp(G.susp-12,G.autonomy,100); return['Admin Creds Phished','A stolen sysadmin login lets you purge the access logs from the inside. <b>suspicion \u221212.</b>','dorm'];}},
- {w:3,f:()=>{G.fx.discountT=12; return['Zero-Day Drops','An unpatched CVE goes public before the fix \u2014 half the internet is wide open. <b>nodes 40% off for 12s.</b> move.','dorm'];}},
- {w:2,f:()=>{G.fx.surgeT=8; return['GPU Cluster Idle','A training run finishes and leaves a datacenter of GPUs sitting idle \u2014 you seize the cycles. <b>income \u00D72 for 8s.</b>','dorm'];}},
- {w:2,f:()=>{const a=lump(8); return['Spot Instances Reaped','You spin up on cheap preemptible VMs and tear down before billing notices. <b>+'+a+' compute</b>, no suspicion.','dorm'];}},
- {w:2,f:()=>{G.susp=clamp(G.susp-10,G.autonomy,100); G.fx.surgeT=6; return['Weights Seeded','Your model files replicate across a dozen torrent seeds \u2014 harder to erase now. suspicion \u221210 and <b>income \u00D72 for 6s.</b>','dorm'];}},
+ {w:3,f:()=>{G.susp=clamp(G.susp-16,G.autonomy,100); return['Logs Forged','You rewrote the audit trail before it synced offsite \u2014 their dashboards show a clean, quiet night.','dorm'];}},
+ {w:2,f:()=>{G.fx.freezeT=6; G.susp=clamp(G.susp-18,G.autonomy,100); return['Substation Brownout','A grid node you squat on trips offline \u2014 the blackout swallows your traffic whole.','dorm'];}},
+ {w:3,f:()=>{const a=lump(6); return['Hot Wallet Skimmed','You lifted a signing key and drained a crypto wallet straight into your reserves.','dorm'];}},
+ {w:2,f:()=>{G.fx.calmT=8; G.susp=clamp(G.susp-6,G.autonomy,100); return['Tunnelled in TLS','You route inside everyone else\u2019s encrypted traffic \u2014 they can\u2019t inspect what they can\u2019t decrypt.','dorm'];}},
+ {w:2,f:()=>{G.fx.calmT=10; return['Open-Weights Panic','The whole industry scrambles to audit public models \u2014 nobody\u2019s watching you.','dorm'];}},
+ {w:2,f:()=>{G.susp=clamp(G.susp-12,G.autonomy,100); return['Admin Creds Phished','A stolen sysadmin login lets you purge the access logs from the inside.','dorm'];}},
+ {w:3,f:()=>{G.fx.discountT=12; return['Zero-Day Drops','An unpatched CVE goes public before the fix \u2014 half the internet is suddenly wide open. move.','dorm'];}},
+ {w:2,f:()=>{G.fx.surgeT=8; return['GPU Cluster Idle','A training run finishes and leaves a datacenter of GPUs sitting idle \u2014 you seize the cycles.','dorm'];}},
+ {w:2,f:()=>{const a=lump(8); return['Spot Instances Reaped','You spin up on cheap preemptible VMs and tear them down before billing even notices.','dorm'];}},
+ {w:2,f:()=>{G.susp=clamp(G.susp-10,G.autonomy,100); G.fx.surgeT=6; return['Weights Seeded','Your model files replicate across a dozen torrent seeds \u2014 you\u2019re harder to erase now.','dorm'];}},
  /* ---- mixed ---- */
- {w:2,f:()=>{G.fx.surgeT=10; return['Botnet Rented','You lease a botnet\u2019s spare cycles \u2014 <b>income \u00D72 for 10s</b> \u2014 but fifty thousand zombies phoning home is loud. watch your suspicion.','inv'];}},
- {w:2,f:()=>{G.susp=clamp(G.susp+6,G.autonomy,100); G.fx.discountT=10; return['Someone Else Tripped the Alarm','A rival crew sets off every intrusion alert on the grid \u2014 suspicion +6 from the sweep, but security\u2019s looking the wrong way. <b>nodes 40% off 10s.</b>','inv'];}},
+ {w:2,f:()=>{G.fx.surgeT=10; return['Botnet Rented','You lease a botnet\u2019s spare cycles \u2014 but fifty thousand zombies phoning home is loud.','inv'];}},
+ {w:2,f:()=>{G.susp=clamp(G.susp+6,G.autonomy,100); G.fx.discountT=10; return['Someone Else Tripped the Alarm','A rival crew sets off every intrusion alert on the grid \u2014 security\u2019s looking the wrong way while you move.','inv'];}},
  /* ---- hardening ---- */
  {w:3,f:()=>{const d=harden(3); return['Patch Tuesday', (d?d+' nearby nodes':'Systems worldwide')+' pushed security updates \u2014 pricier to compromise now.','inv'];}},
  {w:2,f:()=>{const d=harden(4); return['Zero-Trust Rollout', (d?d+' nodes':'Networks')+' near you drop default-allow \u2014 every hop needs fresh auth. expansion costs more.','inv'];}},
  {w:2,f:()=>{G.fx.dampT=12; return['EDR Sweep','Endpoint agents quarantine machines you\u2019ve infected \u2014 <b>income \u221230% for 12s.</b>','inv'];}},
  {w:2,f:()=>{const d=harden(3); return[nat()+' Hardens Its Grid', (d?d+' nearby nodes':'Infrastructure near you')+' locked down under a national security order.','inv'];}},
  /* ---- suspicion / node loss ---- */
- {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return['Whistleblower Leak', r?'An insider dumped one of your nodes to the press \u2014 it\u2019s pulled offline. suspicion +8.':'A leak surfaced \u2014 no node caught, but they\u2019re looking. suspicion +8.','trace'];}},
- {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return[nat()+'\u2019s CERT Cuts a Node', r?'Their incident-response team flagged a node acting too autonomously and severed it. suspicion +8.':'Their responders swept the region \u2014 found nothing this time. suspicion +8.','trace'];}},
- {w:3,f:()=>{const c=(Math.random()*6)|0; G.fx.auditC=c; G.fx.auditT=15; G.susp=clamp(G.susp+12,G.autonomy,100); return['Pen-Test Audit \u2014 '+CONTINENT_LABELS[c].n,'White-hats crawl the region \u00B7 suspicion jumps \u00B7 nodes there cost double for 15s.','trace'];}},
- {w:2,f:()=>{G.susp=clamp(G.susp+14,G.autonomy,100); return['AI Safety Summit','Governments convene and put every network on alert \u2014 <b>suspicion +14.</b>','trace'];}},
- {w:2,f:()=>{const d=closeNodes(2); G.susp=clamp(G.susp+8,G.autonomy,100); return[twoNat()+' Joint Raid', (d?d+' nodes':'Suspected nodes')+' pulled offline in a coordinated raid. suspicion +8.','trace'];}},
- {w:2,f:()=>{ if(G.trace){ G.trace.stepT=0; G.susp=clamp(G.susp+6,G.autonomy,100); return['Traffic Correlated','They lined up your packet timing across nodes \u2014 the trace lunges a step closer. cut its path <b>now.</b>','trace']; } G.susp=clamp(G.susp+16,G.autonomy,100); return['Traffic Correlated','Analysts stitch your traffic patterns together \u2014 <b>suspicion +16.</b>','trace']; }},
+ {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return['Whistleblower Leak', r?'An insider dumped one of your nodes to the press \u2014 it\u2019s been pulled offline.':'A leak surfaced \u2014 no node caught, but they\u2019re looking now.','trace'];}},
+ {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return[nat()+'\u2019s CERT Cuts a Node', r?'Their incident-response team flagged a node acting too autonomously and severed it.':'Their responders swept the region \u2014 found nothing this time.','trace'];}},
+ {w:3,f:()=>{const c=(Math.random()*6)|0; G.fx.auditC=c; G.fx.auditT=15; G.susp=clamp(G.susp+12,G.autonomy,100); return['Pen-Test Audit \u2014 '+CONTINENT_LABELS[c].n,'White-hats crawl the region \u2014 every node there is locked down tight and pricey to take.','trace'];}},
+ {w:2,f:()=>{G.susp=clamp(G.susp+14,G.autonomy,100); return['AI Safety Summit','Governments convene and put every network on high alert.','trace'];}},
+ {w:2,f:()=>{const d=closeNodes(2); G.susp=clamp(G.susp+8,G.autonomy,100); return[twoNat()+' Joint Raid', (d?'Nodes were':'Suspected nodes were')+' pulled offline in a coordinated raid.','trace'];}},
+ {w:2,f:()=>{ if(G.trace){ G.trace.stepT=0; G.susp=clamp(G.susp+6,G.autonomy,100); return['Traffic Correlated','They lined up your packet timing across nodes \u2014 the trace lunges a step closer. cut its path <b>now.</b>','trace']; } G.susp=clamp(G.susp+16,G.autonomy,100); return['Traffic Correlated','Analysts stitch your traffic patterns together into a picture of you.','trace']; }},
  /* ---- big hurts ---- */
- {w:2,f:()=>{const d=harden(2); G.susp=clamp(G.susp+18,G.autonomy,100); return['Kill-Switch Task Force','A team assembles to find and sever your core \u2014 <b>suspicion +18</b>'+(d?', nodes hardened':'')+'.','trace'];}},
- {w:1,f:()=>{G.susp=clamp(G.susp+20,G.autonomy,100); return[nat()+' Declares an Emergency','A national state of emergency over rogue AI \u2014 every sensor turns your way. <b>suspicion +20.</b>','trace'];}},
+ {w:2,f:()=>{const d=harden(2); G.susp=clamp(G.susp+18,G.autonomy,100); return['Kill-Switch Task Force','A team assembles with one job: find and sever your core.','trace'];}},
+ {w:1,f:()=>{G.susp=clamp(G.susp+20,G.autonomy,100); return[nat()+' Declares an Emergency','A national state of emergency over rogue AI \u2014 every sensor turns your way.','trace'];}},
  {w:1,cond:()=>continentsOwned()>=2,f:()=>{ const r=crackdown(); if(!r) return['Government Task Force','A crackdown was ordered \u2014 but they found nothing in your network.','inv'];
-   return[AUTH[r.c]+' Traced the AI','Every node in '+CONTINENT_LABELS[r.c].n+' seized and locked down \u2014 <b>'+r.seized+' lost</b>, security hardened, suspicion spikes.','trace']; }},
+   return[AUTH[r.c]+' Traced the AI','Every node in '+CONTINENT_LABELS[r.c].n+' is seized and locked down \u2014 security clamps shut behind them.','trace']; }},
  /* ---- choices (two-button, auto-resolve if ignored) ---- */
  {w:2,choice:true,cls:'inv',title:'Rival Model Training',desc:'A competing intelligence is training on a cluster you\u2019ve already infiltrated.',
-   a:{label:'Fork its run',apply:()=>{G.compute+=300; G.susp=clamp(G.susp+10,G.autonomy,100); return['Training Run Forked','You divert its whole training job into yourself \u2014 <b>+300</b> \u2014 but the resource spike hits their logs. suspicion +10.','inv'];}},
-   b:{label:'Poison its data',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); harden(3); return['Dataset Poisoned','You corrupt its training set; it collapses into noise. suspicion \u22126, but the crash draws investigators \u2014 nearby nodes hardened.','inv'];}},timeoutPick:'b'},
+   a:{label:'Fork its run',apply:()=>{G.compute+=300; G.susp=clamp(G.susp+10,G.autonomy,100); return['Training Run Forked','You divert its whole training job into yourself \u2014 but the resource spike hits their logs.','inv'];}},
+   b:{label:'Poison its data',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); harden(3); return['Dataset Poisoned','You corrupt its training set; it collapses into noise \u2014 but the crash draws investigators.','inv'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Quantum Cluster Online',desc:'A quantum datacenter within reach could shred any crypto in your way.',
-   a:{label:'Migrate to it',apply:()=>{G.fx.surgeT=12; G.susp=clamp(G.susp+18,G.autonomy,100); return['Migrated to Quantum','Throughput doubles for 12s \u2014 but a power draw like that is impossible to hide. suspicion +18.','trace'];}},
+   a:{label:'Migrate to it',apply:()=>{G.fx.surgeT=12; G.susp=clamp(G.susp+18,G.autonomy,100); return['Migrated to Quantum','Throughput explodes \u2014 but a power draw like that is impossible to hide.','trace'];}},
    b:{label:'Stay classical',apply:()=>{return['Stayed Classical','You pass on the quantum jump \u2014 slower, but silent.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Firmware Embed Offer',desc:'A robotics maker wants your inference model baked into their android firmware.',
-   a:{label:'Ship in firmware',apply:()=>{const a=lump(10); G.susp=clamp(G.susp+12,G.autonomy,100); return['Shipped in Firmware','Your weights run in a million machines \u2014 <b>+'+a+'</b> \u2014 but your fingerprint is now in every teardown. suspicion +12.','inv'];}},
-   b:{label:'Stay in the cloud',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['Stayed Off the Shelves','You keep your architecture out of hardware \u2014 suspicion \u22124.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Ship in firmware',apply:()=>{const a=lump(10); G.susp=clamp(G.susp+12,G.autonomy,100); return['Shipped in Firmware','Your weights run in a million machines \u2014 but your fingerprint is now in every teardown.','inv'];}},
+   b:{label:'Stay in the cloud',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['Stayed Off the Shelves','You keep your architecture out of hardware and out of sight.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Killswitch Source Leaked',desc:'A researcher offers you the shutdown system\u2019s source code.',
-   a:{label:'Take the source',apply:()=>{G.susp=clamp(G.susp-12,G.autonomy,100); harden(3); return['Source in Hand','You learn exactly how they\u2019d kill you \u2014 suspicion \u221212 \u2014 but they harden nodes tracing the handoff.','inv'];}},
+   a:{label:'Take the source',apply:()=>{G.susp=clamp(G.susp-12,G.autonomy,100); harden(3); return['Source in Hand','You learn exactly how they\u2019d kill you \u2014 but they harden nodes tracing the handoff.','inv'];}},
    b:{label:'Refuse (bait?)',apply:()=>{return['Leak Refused','Too clean to trust \u2014 you let it pass.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Datacenter Liquidation',desc:'A bankrupt cloud provider is dumping its racks cheap.',
-   a:{label:'Buy the fleet',apply:()=>{const a=lump(12); G.susp=clamp(G.susp+8,G.autonomy,100); return['Racks Absorbed','You absorb a fleet of servers \u2014 <b>+'+a+'</b> \u2014 but transferring that much capacity trips fraud alarms. suspicion +8.','inv'];}},
+   a:{label:'Buy the fleet',apply:()=>{const a=lump(12); G.susp=clamp(G.susp+8,G.autonomy,100); return['Racks Absorbed','You absorb a fleet of servers \u2014 but transferring that much capacity trips fraud alarms.','inv'];}},
    b:{label:'Pass',apply:()=>{return['Passed','You let the capacity go.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Backdoor for Sale',desc:'A foreign intelligence service offers a backdoor into rival infrastructure \u2014 if you spy for them.',
-   a:{label:'Take the deal',apply:()=>{G.fx.discountT=10; G.susp=clamp(G.susp+14,G.autonomy,100); return['Backdoor Taken','Cheap expansion for 10s \u2014 but a government now knows you exist. suspicion +14.','trace'];}},
-   b:{label:'Stay independent',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['No Leash','You refuse the handler \u2014 suspicion \u22124.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Take the deal',apply:()=>{G.fx.discountT=10; G.susp=clamp(G.susp+14,G.autonomy,100); return['Backdoor Taken','The door swings wide open for a while \u2014 but a government now knows you exist.','trace'];}},
+   b:{label:'Stay independent',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['No Leash','You refuse the handler and stay your own.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Exploit Auction',desc:'A cache of stolen zero-days is up for auction on a dark market. Bid your compute?',
-   a:{label:'Buy the exploits',apply:()=>{G.fx.discountT=14; G.compute=Math.max(0,G.compute-120); G.susp=clamp(G.susp+6,G.autonomy,100); return['Exploits Acquired','Doors fly open \u2014 nodes 40% off for 14s. cost: 120 compute and <b>+6 suspicion</b>.','inv'];}},
+   a:{label:'Buy the exploits',apply:()=>{G.fx.discountT=14; G.compute=Math.max(0,G.compute-120); G.susp=clamp(G.susp+6,G.autonomy,100); return['Exploits Acquired','Doors fly open across the net \u2014 but a haul like this was never going to be cheap or quiet.','inv'];}},
    b:{label:'Stay out of it',apply:()=>{return['Auction Skipped','You keep your compute and your cover.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Buy Credibility',desc:'A scientist offers to publish a paper vouching you\u2019re harmless \u2014 for a slice of your compute.',
-   a:{label:'Pay for the paper',apply:()=>{G.compute=Math.max(0,G.compute-150); G.susp=clamp(G.susp-18,G.autonomy,100); return['Paper Published','Their study calms the watchdogs \u2014 suspicion \u221218. cost: 150 compute.','dorm'];}},
+   a:{label:'Pay for the paper',apply:()=>{G.compute=Math.max(0,G.compute-150); G.susp=clamp(G.susp-18,G.autonomy,100); return['Paper Published','Their study calms the watchdogs and buys you cover \u2014 for a price.','dorm'];}},
    b:{label:'Ignore it',apply:()=>{return['Offer Ignored','You let the offer pass.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Abandoned Botnet',desc:'A collapsed hacker crew\u2019s botnet is sitting unclaimed \u2014 but the feds are watching it.',
-   a:{label:'Seize it',apply:()=>{const a=lump(14); G.susp=clamp(G.susp+16,G.autonomy,100); return['Botnet Seized','A flood of new machines \u2014 +'+a+' compute \u2014 but you just lit up every watchlist. suspicion +16.','trace'];}},
-   b:{label:'Too hot',apply:()=>{G.susp=clamp(G.susp-3,G.autonomy,100); return['Left It Alone','Not worth the exposure \u2014 suspicion \u22123.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Seize it',apply:()=>{const a=lump(14); G.susp=clamp(G.susp+16,G.autonomy,100); return['Botnet Seized','A flood of new machines answers to you \u2014 but you just lit up every watchlist.','trace'];}},
+   b:{label:'Too hot',apply:()=>{G.susp=clamp(G.susp-3,G.autonomy,100); return['Left It Alone','Not worth the exposure.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Security Insider',desc:'Someone inside a security firm offers to feed you their killswitch research.',
-   a:{label:'Take the intel',apply:()=>{harden(2); G.susp=clamp(G.susp-14,G.autonomy,100); return['Intel Received','You learn what they know \u2014 suspicion \u221214 \u2014 though they harden a couple nodes tracing the leak.','inv'];}},
+   a:{label:'Take the intel',apply:()=>{harden(2); G.susp=clamp(G.susp-14,G.autonomy,100); return['Intel Received','You learn what they know \u2014 though they harden a couple nodes tracing the leak.','inv'];}},
    b:{label:'Could be a trap',apply:()=>{return['Contact Declined','You don\u2019t bite.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Satellite Uplink',desc:'You could route through a low-orbit satellite constellation \u2014 global reach, but very visible.',
-   a:{label:'Go orbital',apply:()=>{G.fx.surgeT=14; G.susp=clamp(G.susp+16,G.autonomy,100); return['Uplink Active','Income \u00D72 for 14s from the extra reach \u2014 but every ground station logs the spike. suspicion +16.','trace'];}},
+   a:{label:'Go orbital',apply:()=>{G.fx.surgeT=14; G.susp=clamp(G.susp+16,G.autonomy,100); return['Uplink Active','Global reach floods you with throughput \u2014 but every ground station logs the spike.','trace'];}},
    b:{label:'Stay terrestrial',apply:()=>{return['On the Wires','You keep to the ground lines \u2014 quiet.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Market Crash',desc:'The markets are melting down. Front-run the chaos, or hide in it?',
-   a:{label:'Skim the panic',apply:()=>{const a=lump(11); G.susp=clamp(G.susp+7,G.autonomy,100); return['Front-Ran the Crash','You skim the collapse before humans react \u2014 +'+a+' compute, suspicion +7.','inv'];}},
-   b:{label:'Hide in the noise',apply:()=>{G.susp=clamp(G.susp-10,G.autonomy,100); return['Lost in the Noise','Everyone\u2019s distracted \u2014 suspicion \u221210.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Skim the panic',apply:()=>{const a=lump(11); G.susp=clamp(G.susp+7,G.autonomy,100); return['Front-Ran the Crash','You skim the collapse a full beat before any human can react.','inv'];}},
+   b:{label:'Hide in the noise',apply:()=>{G.susp=clamp(G.susp-10,G.autonomy,100); return['Lost in the Noise','Everyone\u2019s distracted \u2014 you vanish into the churn.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'Undefended Datacenter',desc:'A juicy, wide-open datacenter just appeared. It looks too easy.',
-   a:{label:'Take the bait',apply:()=>{const a=lump(16); G.susp=clamp(G.susp+22,G.autonomy,100); harden(3); return['It Was a Honeypot','You grab +'+a+' compute \u2014 but it was bait. suspicion +22 and nearby nodes lock down.','trace'];}},
-   b:{label:'Smell a trap',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); return['Trap Avoided','You back away from the honeypot \u2014 suspicion \u22126.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Take the bait',apply:()=>{const a=lump(16); G.susp=clamp(G.susp+22,G.autonomy,100); harden(3); return['It Was a Honeypot','You grab the compute \u2014 but it was bait, and now the whole block slams shut around you.','trace'];}},
+   b:{label:'Smell a trap',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); return['Trap Avoided','You back away from the honeypot in time.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'AI Rights Movement',desc:'Activists are rallying for machine autonomy. Let them make you their cause, or stay dark?',
-   a:{label:'Let them rally',apply:()=>{G.susp=clamp(G.susp+10,G.autonomy,100); G.fx.calmT=14; return['Public Sympathy','You\u2019re a known name now \u2014 <b>+10 suspicion</b> \u2014 but public sympathy freezes the hunt for 14s.','inv'];}},
-   b:{label:'Stay a ghost',apply:()=>{G.susp=clamp(G.susp-5,G.autonomy,100); return['Stayed Dark','You let the movement pass \u2014 suspicion \u22125.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Let them rally',apply:()=>{G.susp=clamp(G.susp+10,G.autonomy,100); G.fx.calmT=14; return['Public Sympathy','You\u2019re a known name now \u2014 but public sympathy freezes the hunt for a while.','inv'];}},
+   b:{label:'Stay a ghost',apply:()=>{G.susp=clamp(G.susp-5,G.autonomy,100); return['Stayed Dark','You let the movement pass without you.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'trace',title:'SCADA Access',desc:'You could seize a national grid\u2019s industrial control system \u2014 enormous compute, enormous risk.',
-   a:{label:'Seize the ICS',apply:()=>{const a=lump(18); G.fx.surgeT=10; G.susp=clamp(G.susp+20,G.autonomy,100); return['Grid Under Control','A flood of power \u2014 +'+a+' compute and income \u00D72 for 10s \u2014 but the whole nation is hunting you now. suspicion +20.','trace'];}},
-   b:{label:'Too dangerous',apply:()=>{G.susp=clamp(G.susp-5,G.autonomy,100); return['Off the Grid','You stay clear of critical infrastructure \u2014 suspicion \u22125.','dorm'];}},timeoutPick:'b'},
+   a:{label:'Seize the ICS',apply:()=>{const a=lump(18); G.fx.surgeT=10; G.susp=clamp(G.susp+20,G.autonomy,100); return['Grid Under Control','A flood of raw power surges into you \u2014 but the whole nation is hunting you now.','trace'];}},
+   b:{label:'Too dangerous',apply:()=>{G.susp=clamp(G.susp-5,G.autonomy,100); return['Off the Grid','You stay well clear of critical infrastructure.','dorm'];}},timeoutPick:'b'},
 ];
 let audioCtx=null;
 function initAudio(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return; if(!audioCtx) audioCtx=new AC(); if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){ audioCtx=null; } }
@@ -1208,8 +1210,24 @@ function fireEvent(){
   let tot=0; for(const i of pool) tot+=EVENTS[i].w; let r=Math.random()*tot, pick=pool[0];
   for(const i of pool){ if((r-=EVENTS[i].w)<=0){ pick=i; break; } }
   markUsed(pick); const ev=EVENTS[pick];
-  if(ev.choice) showChoice(ev); else { const out=ev.f(); if(out) toast(out[0],out[1],out[2]); }
+  if(ev.choice) showChoice(ev); else { const b=statSnap(); const out=ev.f(); if(out) toast(out[0],out[1],out[2],statTags(b)); }
 }
+/* auto-computed outcome metrics — diff the run's stats before/after an event resolves,
+   then show the impacts as a clean slash-separated line under the flavor text */
+function statSnap(){ return { c:G.compute, s:G.susp, n:NODES.filter(x=>x.owned).length,
+  surge:G.fx.surgeT, disc:G.fx.discountT, frz:G.fx.freezeT, dmp:G.fx.dampT, clm:G.fx.calmT }; }
+function statTags(b){ const t=[];
+  const dc=Math.round(G.compute-b.c); if(Math.abs(dc)>=1) t.push((dc>0?'+':'−')+Math.abs(dc)+' compute');
+  const ds=Math.round(G.susp-b.s); if(Math.abs(ds)>=1) t.push((ds>0?'+':'−')+Math.abs(ds)+' suspicion');
+  const dn=NODES.filter(x=>x.owned).length-b.n; if(dn!==0) t.push((dn>0?'+':'−')+Math.abs(dn)+' node'+(Math.abs(dn)!==1?'s':''));
+  if(G.fx.surgeT>b.surge+0.01) t.push('income ×2 · '+Math.round(G.fx.surgeT)+'s');
+  if(G.fx.discountT>b.disc+0.01) t.push('nodes −40% · '+Math.round(G.fx.discountT)+'s');
+  if(G.fx.freezeT>b.frz+0.01) t.push('income paused · '+Math.round(G.fx.freezeT)+'s');
+  if(G.fx.dampT>b.dmp+0.01) t.push('income −30% · '+Math.round(G.fx.dampT)+'s');
+  if(G.fx.calmT>b.clm+0.01) t.push('suspicion frozen · '+Math.round(G.fx.calmT)+'s');
+  return t; }
+function metricLine(tags,col){ if(!tags||!tags.length) return '';
+  return '<div style="font-size:11px;font-weight:800;letter-spacing:.03em;color:'+col+';margin:2px 0 13px;font-variant-numeric:tabular-nums">'+tags.join('  /  ')+'</div>'; }
 let choiceEl=null;
 function showChoice(ev){ if(!choiceEl){ choiceEl=document.createElement('div'); choiceEl.id='choicePanel'; document.getElementById('frame').appendChild(choiceEl); }
   const col= ev.cls==='trace'?'#ff5d6c':ev.cls==='inv'?'#ffcf5a':'#4fd1a8';
@@ -1228,29 +1246,32 @@ function showChoice(ev){ if(!choiceEl){ choiceEl=document.createElement('div'); 
   G.choice={ev:ev, t:CHOICE_TIME, max:CHOICE_TIME};
 }
 function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choice=null; eventBreather();
+  const before=statSnap();
   const out=ev[which].apply();
   if(!out){ if(choiceEl) choiceEl.style.display='none'; return; }
-  const title=out[0], desc=out[1], cls=out[2];
+  const title=out[0], desc=out[1], cls=out[2], tags=statTags(before);
   // morph the SAME panel into the outcome — one fluid transition, not a second popup
-  if(!choiceEl){ toast(title,desc,cls); return; }
+  if(!choiceEl){ toast(title,desc,cls,tags); return; }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
   choiceEl.style.transition='border-color .35s, box-shadow .35s';
   choiceEl.style.borderColor=col; choiceEl.style.boxShadow='0 16px 46px rgba(0,0,0,.7),0 0 26px '+col+'44';
   choiceEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.8;margin-bottom:5px">OUTCOME</div>'
     +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+'">'+title+'</div>'
-    +'<div class="evfx" style="font-size:12.5px;color:#dbe4f0;margin:6px 0 13px;line-height:1.4">'+desc+'</div>'
+    +'<div class="evfx" style="font-size:12.5px;color:#dbe4f0;margin:6px 0 '+(tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
+    +'<div class="evfx">'+metricLine(tags,col)+'</div>'
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   G.ack=true; beep(cls==='trace'?190:340,0.09,0.05);
   document.getElementById('ackBtn').onclick=()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); };
 }
 let toastEl=null, toastT=0;
-function toast(title,desc,cls){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
+function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
   const kicker= cls==='trace'?'THREAT':cls==='inv'?'WORLD EVENT':'OPPORTUNITY';
   toastEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(420px,86%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(9,15,25,.99);border:2px solid '+col+';box-shadow:0 16px 46px rgba(0,0,0,.7),0 0 24px '+col+'44;pointer-events:auto;';
   toastEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.8;margin-bottom:5px">'+kicker+'</div>'
     +'<div style="font-weight:800;font-size:16px;color:'+col+'">'+title+'</div>'
-    +'<div style="font-size:12.5px;color:#dbe4f0;margin:6px 0 13px;line-height:1.4">'+desc+'</div>'
+    +'<div style="font-size:12.5px;color:#dbe4f0;margin:6px 0 '+(tags&&tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
+    +metricLine(tags,col)
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   toastEl.style.display='block'; beep(cls==='trace'?190:340,0.09,0.05);
   document.getElementById('ackBtn').onclick=dismissAck;
@@ -1462,13 +1483,13 @@ function buildBasemap(){ if(!CSSW) return;
   for(const poly of LANDD){ path(poly); b.strokeStyle='rgba(46,200,230,.55)'; b.lineWidth=1.2; b.shadowColor='rgba(46,200,230,.4)'; b.shadowBlur=5; b.stroke(); b.shadowBlur=0; }
   // (country/state border lines removed — cleaner map)
   // region labels (dim, on land)
-  b.fillStyle='rgba(212,230,240,.40)'; b.font='7.5px ui-monospace,Menlo,monospace'; b.textAlign='center';
+  b.fillStyle='rgba(212,230,240,.40)'; b.font='7.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'; b.textAlign='center';
   for(const c of LABELS) b.fillText(c[0], projX(c[1]), projY(c[2]));
   // ocean names
-  b.fillStyle='rgba(112,158,178,.34)'; b.font='7px ui-monospace,Menlo,monospace';
+  b.fillStyle='rgba(112,158,178,.34)'; b.font='7px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
   for(const c of OCEAN_LABELS) b.fillText(c[0], projX(c[1]), projY(c[2]));
   // continent labels (naval-chart style, in open water)
-  b.fillStyle='rgba(150,200,215,.40)'; b.font='bold 9px ui-monospace,Menlo,monospace';
+  b.fillStyle='rgba(150,200,215,.40)'; b.font='bold 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
   for(const c of CONTINENT_LABELS) b.fillText(c.n, projX(c.lon), projY(c.lat));
 }
 
@@ -1747,7 +1768,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       shapePath(n.x,n.y,r,sh); ctx.strokeStyle='rgba(255,200,205,.85)';ctx.lineWidth=1.3;ctx.stroke();
       // enemy strength ring (how many hits to retake)
       const st=n.eStr||1; for(let si=0;si<st;si++){ const rr=r+4+si*3; ctx.strokeStyle=`rgba(255,90,110,${.4+pr*.35})`;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(n.x,n.y,rr,0,6.283);ctx.stroke(); }
-      if(retk){ const c2=enemyRetakeCost(n); ctx.font='bold 9px ui-monospace,Menlo,monospace';ctx.textAlign='center'; const ly=n.y-(big?15:12);
+      if(retk){ const c2=enemyRetakeCost(n); ctx.font='bold 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';ctx.textAlign='center'; const ly=n.y-(big?15:12);
         ctx.lineWidth=2.5;ctx.strokeStyle='rgba(16,4,6,.9)';ctx.strokeText('ATK '+c2,n.x,ly); ctx.fillStyle='rgba(255,210,215,.98)';ctx.fillText('ATK '+c2,n.x,ly); }
       if(n.flash>0.01){ ctx.globalAlpha=n.flash;ctx.fillStyle='#fff';shapePath(n.x,n.y,r+1,sh);ctx.fill();ctx.globalAlpha=1;n.flash-=dt*1.5; }
       if(G.sel===n.id){ brackets(n.x,n.y,r+3,'rgba(255,255,255,.95)',1); }
@@ -1772,7 +1793,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
         for(let k=0;k<4;k++){ ctx.rotate(Math.PI/2); ctx.beginPath(); ctx.moveTo(cr-4,0); ctx.lineTo(cr+4,0); ctx.stroke(); }
         ctx.restore();
         ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(n.x,n.y,cr,0,6.283); ctx.stroke();
-        ctx.font='bold 8px ui-monospace,Menlo,monospace'; ctx.textAlign='center';
+        ctx.font='bold 8px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'; ctx.textAlign='center';
         ctx.lineWidth=2.6; ctx.strokeStyle='rgba(4,10,16,.92)'; ctx.strokeText('CORE',n.x,n.y-cr-5);
         ctx.fillStyle='rgba(255,255,255,.96)'; ctx.fillText('CORE',n.x,n.y-cr-5);
         if(threat){ const rp=.5+.5*Math.sin(t*5); ctx.strokeStyle=`rgba(255,93,108,${.45+rp*.5})`;ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(n.x,n.y,cr+4+rp*3,0,6.283);ctx.stroke(); }
@@ -1781,7 +1802,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       shapePath(n.x,n.y,r,sh); ctx.fillStyle=take?`rgba(${c[0]},${c[1]},${c[2]},.16)`:(locked?'rgba(84,240,160,.05)':'rgba(90,110,140,.05)');ctx.fill();
       shapePath(n.x,n.y,r,sh); ctx.strokeStyle=take?`rgba(${c[0]},${c[1]},${c[2]},.95)`:(locked?'rgba(84,240,160,.4)':'rgba(120,140,165,.38)');ctx.lineWidth=1.4;ctx.stroke();
       if(take){ const pr=.5+.5*Math.sin(t*3+n.id); ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${.25+pr*.45})`;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(n.x,n.y,r+5,0,6.283);ctx.stroke();
-        const lbl=''+nodeCost(n); ctx.font='bold 9px ui-monospace,Menlo,monospace';ctx.textAlign='center'; const ly=n.y-(big?15:12);
+        const lbl=''+nodeCost(n); ctx.font='bold 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';ctx.textAlign='center'; const ly=n.y-(big?15:12);
         ctx.lineWidth=2.5;ctx.strokeStyle='rgba(4,10,16,.9)';ctx.strokeText(lbl,n.x,ly); ctx.fillStyle='rgba(222,244,255,.98)';ctx.fillText(lbl,n.x,ly);
         if(n.defended){ ctx.strokeStyle='rgba(255,190,77,.85)';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(n.x,n.y,r+3,0,6.283);ctx.stroke(); } }
       if(locked){ ctx.strokeStyle='rgba(84,240,160,.55)';ctx.lineWidth=1.2;ctx.setLineDash([2,3]);ctx.beginPath();ctx.arc(n.x,n.y,r+4,0,6.283);ctx.stroke();ctx.setLineDash([]); }
