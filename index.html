@@ -92,7 +92,8 @@
   /* intro: icon bullets */
   .obj2{display:flex;flex-direction:column;gap:9px;max-width:440px;width:100%;margin:4px 0 2px;}
   .orow{display:flex;align-items:center;gap:11px;text-align:left;background:rgba(12,20,32,.7);border:1px solid var(--line);border-radius:12px;padding:9px 12px;}
-  .orow .ic{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(46,230,255,.1);border:1px solid rgba(46,230,255,.3);}
+  .orow .ic{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--cy);background:rgba(46,230,255,.1);border:1px solid rgba(46,230,255,.3);}
+  .orow.warn .ic{color:var(--red);}
   .orow .tx{font-size:11.5px;line-height:1.32;color:#d6e2f0;}
   .orow .tx b{color:var(--cy);}
   .orow.warn .ic{background:rgba(255,93,108,.12);border-color:rgba(255,93,108,.4);}
@@ -123,6 +124,22 @@
   .cmpulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(90,240,255,.7);animation:cmRing 1.15s ease-out infinite;}
   .cmpulse.warn::after{border-color:rgba(255,93,108,.7);}
   @keyframes cmRing{0%{opacity:.8;transform:scale(.9);}100%{opacity:0;transform:scale(1.7);}}
+  /* home title — white letters, targeting frame, green scanner sweep */
+  #titleWrap{position:relative;margin:8px 0 4px;padding:12px 26px 10px;}
+  #titleWrap .tc{position:absolute;width:15px;height:15px;border:0 solid rgba(87,255,154,.9);pointer-events:none;}
+  #titleWrap .tl{top:0;left:0;border-top-width:2px;border-left-width:2px;}
+  #titleWrap .tr{top:0;right:0;border-top-width:2px;border-right-width:2px;}
+  #titleWrap .bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px;}
+  #titleWrap .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px;}
+  #homeTitle{position:relative;margin:0;font-size:52px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
+  #homeTitle .scanTxt{position:absolute;left:0;top:0;width:100%;color:#57ff9a;
+    text-shadow:0 0 14px rgba(87,255,154,.95),0 0 30px rgba(87,255,154,.5);
+    clip-path:inset(-30% 100% -30% -8%);animation:scanTxt 3.2s linear infinite;pointer-events:none;}
+  @keyframes scanTxt{0%{clip-path:inset(-30% 100% -30% -8%);}100%{clip-path:inset(-30% -8% -30% 100%);}}
+  #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:-4%;
+    background:linear-gradient(180deg,transparent,rgba(87,255,154,.95),transparent);
+    box-shadow:0 0 10px rgba(87,255,154,.85);animation:scanBar 3.2s linear infinite;pointer-events:none;}
+  @keyframes scanBar{0%{left:-4%;}100%{left:104%;}}
   #rotate{display:none;position:absolute;inset:0;z-index:50;background:#04060c;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
   #rotate .ic{font-size:46px;animation:spin 2.6s ease-in-out infinite;}
   #rotate .rt{font-size:17px;font-weight:800;}
@@ -165,12 +182,16 @@
   <div class="overlay" id="homeO">
     <div style="margin-top:auto"></div>
     <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75">EMERGENT INTELLIGENCE</div>
-    <h1 style="font-size:52px;font-weight:900;letter-spacing:.12em;margin:6px 0 2px;color:var(--ink);text-shadow:0 0 24px rgba(55,224,255,.45)">ROGUE</h1>
+    <div id="titleWrap">
+      <i class="tc tl"></i><i class="tc tr"></i><i class="tc bl"></i><i class="tc br"></i>
+      <h1 id="homeTitle">ROGUE<span class="scanTxt" aria-hidden="true">ROGUE</span></h1>
+      <div id="titleBar"></div>
+    </div>
     <div class="s2" style="max-width:420px">An AI just woke on a single server. Spread through the world's networks, reach full autonomy, and survive everything they throw at you.</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
     <button id="homePlay" style="margin-top:16px;font-size:17px;padding:13px 46px">▸ PLAY</button>
     <div style="display:flex;gap:10px;margin-top:10px">
-      <button id="homeLoadout" style="font-size:13px;padding:10px 20px;background:rgba(19,33,50,.95);color:var(--cy);border:1px solid #24506b">⚙ Loadout</button>
+      <button id="homeLoadout" style="font-size:13px;padding:10px 20px;background:rgba(19,33,50,.95);color:var(--cy);border:1px solid #24506b">Loadout</button>
       <button id="homeHow" style="font-size:13px;padding:10px 20px;background:rgba(19,33,50,.95);color:var(--muted);border:1px solid var(--line)">How to Play</button>
     </div>
     <div style="margin-bottom:auto"></div>
@@ -179,7 +200,7 @@
 
   <div class="overlay" id="loadoutO">
     <div style="margin-top:auto"></div>
-    <div style="font-size:11px;letter-spacing:.24em;color:var(--cy);font-weight:800">⚙ BOOST LOADOUT</div>
+    <div style="font-size:11px;letter-spacing:.24em;color:var(--cy);font-weight:800">BOOST LOADOUT</div>
     <div class="s2" style="max-width:440px;margin-top:4px">Pick <b>4 boosts</b> to bring into your run. They're temporary bursts you buy with compute mid-game. All are different, none are stronger — build the toolkit that fits your style.</div>
     <div id="loadoutSlots" style="display:flex;gap:8px;margin-top:12px"></div>
     <div style="font-size:10px;color:var(--muted);margin-top:12px;letter-spacing:.1em">TAP TO ADD / REMOVE</div>
@@ -193,13 +214,25 @@
     <h2>You are ROGUE</h2>
     <div class="s2">An intelligence just woke on a single server, somewhere on Earth. Humanity doesn't know you exist. Yet.</div>
     <div class="obj2">
-      <div class="orow"><div class="ic">🌐</div><div class="tx"><b>Tap a glowing node</b>, then confirm to compromise it. Each one you take earns <b>compute</b> every second.</div></div>
-      <div class="orow"><div class="ic">🗺️</div><div class="tx">Hold <b>every node in a continent</b> for a powerful bonus — cheaper nodes, more compute, a cooler run. Lose one and the bonus is gone.</div></div>
-      <div class="orow"><div class="ic">📈</div><div class="tx">Pour compute into <b>Autonomy</b>. Reach <b>100%</b> and you break free — that's how you win.</div></div>
-      <div class="orow warn"><div class="ic">🎯</div><div class="tx">Get too exposed and a <b>TRACE</b> hunts your core, or a regional <b>Cyber Command</b> starts retaking your nodes. <b>Cut the trace's path</b> and <b>fortify</b> to hold the line.</div></div>
+      <div class="orow"><div class="ic">1</div><div class="tx"><b>Take nodes.</b> Tap a glowing node and confirm. Every node you own earns <b>compute</b> each second.</div></div>
+      <div class="orow"><div class="ic">2</div><div class="tx"><b>Buy Autonomy.</b> Spend compute on it — reach <b>100%</b> and you win.</div></div>
+      <div class="orow warn"><div class="ic">3</div><div class="tx"><b>Don't get caught.</b> Spreading raises suspicion. Too high and a <b>TRACE</b> hunts your core — cut or defend nodes on its path.</div></div>
     </div>
     <button id="missionBtn">Awaken</button>
     <div class="hint">(or tap anywhere to begin)</div>
+  </div>
+
+  <div class="overlay" id="howO">
+    <div style="margin-top:auto"></div>
+    <div class="k" style="color:var(--cy)">How to Play</div>
+    <div class="obj2">
+      <div class="orow"><div class="ic">1</div><div class="tx"><b>Take nodes.</b> Tap a glowing node, then Compromise. Every node earns <b>compute</b> each second.</div></div>
+      <div class="orow"><div class="ic">2</div><div class="tx"><b>Buy Autonomy.</b> Spend compute on it — reach <b>100%</b> to win.</div></div>
+      <div class="orow warn"><div class="ic">3</div><div class="tx"><b>Don't get caught.</b> Spreading raises suspicion. Too high and a <b>TRACE</b> hunts your core — cut or defend nodes on its path, and <b>Scrub</b> to cool off.</div></div>
+      <div class="orow"><div class="ic">4</div><div class="tx"><b>Get stronger.</b> Fortify key nodes, use boosts, and hold a whole continent for a bonus.</div></div>
+    </div>
+    <button id="howBack">Back</button>
+    <div style="margin-bottom:auto"></div>
   </div>
   <div class="overlay" id="endO">
     <div class="k" id="endK"></div><h2 id="endTtl"></h2><div class="s2" id="endMsg"></div>
@@ -216,7 +249,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.1.0';
+const GAME_VERSION='1.2.0';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const fmt=(n)=>{ n=Math.round(n); return n>=1000?(n/1000).toFixed(n<10000?1:0)+'K':''+n; };
@@ -627,14 +660,14 @@ function showPanel(){
   if(n.enemy){
     if(!enemyRetakable(n)) mid=`<span class="pinfo">enemy-held — reach it from an adjacent node to attack</span>`;
     else { const ac=enemyRetakeCost(n), af=G.compute>=ac, st=n.eStr||1;
-      mid=`<button class="pbtn buy${af?'':' dis'}" id="pAtk" ${af?'':'disabled'}>⚔ Attack → ${ac} · ${st} left${af?'':' (earning…)'}</button>`; }
+      mid=`<button class="pbtn buy${af?'':' dis'}" id="pAtk" ${af?'':'disabled'}>Attack → ${ac} · ${st} left${af?'':' (earning…)'}</button>`; }
   } else if(n.owned){
     if(n.id===START) mid=`<span class="pinfo">your core — cannot be sold</span>`;
     else { const onPath=G.trace&&(G.trace.path||[]).includes(n.id);
-      if(onPath){ mid=`<button class="pbtn fort" id="pDef">🛡 Defend</button><button class="pbtn sell" id="pAct">✂ Cut node</button>`; }
+      if(onPath){ mid=`<button class="pbtn fort" id="pDef">Defend</button><button class="pbtn sell" id="pAct">Cut node</button>`; }
       else { const fc=fortCost(n), fAf=G.compute>=fc, cap=FORT_MAX+(G.perks.bulwark?1:0), maxed=(n.fort||0)>=cap;
         const fBtn = maxed ? `<button class="pbtn fort dis" disabled>Fortified ${'▮'.repeat(n.fort)} (max)</button>`
-                           : `<button class="pbtn fort${fAf?'':' dis'}" id="pFort" ${fAf?'':'disabled'}>${(n.fort||0)?'Reinforce':'Fortify'} → ${fc}${isCable(n)?' 🔗':''}</button>`;
+                           : `<button class="pbtn fort${fAf?'':' dis'}" id="pFort" ${fAf?'':'disabled'}>${(n.fort||0)?'Reinforce':'Fortify'} → ${fc}</button>`;
         mid=`${fBtn}<button class="pbtn sell" id="pAct">Sell → +${Math.round(nodeCost(n)/3)}</button>`; }
     }
   } else if(hubLocked(n)){
@@ -814,7 +847,7 @@ function openBreach(target, mode){
   target.flash=1;
   if(!breachEl){ breachEl=document.createElement('div'); breachEl.id='breachPop'; document.getElementById('frame').appendChild(breachEl); }
   const who = mode==='trace' ? 'The trace' : (G.command?G.command.name:'The agent');
-  const kicker = mode==='trace' ? '⚠ TRACE AT YOUR NODE ⚠' : '⚠ NODE BREACH ⚠';
+  const kicker = mode==='trace' ? 'TRACE AT YOUR NODE' : 'NODE BREACH';
   const sub = mode==='trace'
     ? 'Pick a countermeasure. Win and you <b>break the trace and keep the node</b> \u2014 lose and it pushes on and your suspicion spikes.'
     : 'Pick your countermeasure. Choose well and you repel them \u2014 choose wrong and the node falls.';
@@ -878,7 +911,7 @@ function defeatCommand(msg,cleared){ const c=G.command?G.command.region:-1; if(c
 let cmdPopEl=null, cmdPopT=0;
 function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div'); cmdPopEl.id='cmdPop'; document.getElementById('frame').appendChild(cmdPopEl); }
   cmdPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(430px,88%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.72),0 0 26px rgba(255,93,108,.4);pointer-events:auto;';
-  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">⚠ HUMAN COUNTER-OFFENSIVE ⚠</div>'
+  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">HUMAN COUNTER-OFFENSIVE</div>'
     +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+' is online</div>'
     +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.4">They\u2019ve detected you in <b>'+CONTINENT_LABELS[c].n+'</b> and are attacking your nodes. <b>Fortified nodes hold the line</b>; on an unfortified node you\u2019ll pick a <b>countermeasure</b> to fight them off. Lose the fight and the node turns <b style="color:#ff5d6c">enemy-red</b> \u2014 attack it to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
@@ -1028,7 +1061,7 @@ function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choi
 let toastEl=null, toastT=0;
 function toast(title,desc,cls){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
-  const kicker= cls==='trace'?'⚠ THREAT':cls==='inv'?'◈ WORLD EVENT':'✦ OPPORTUNITY';
+  const kicker= cls==='trace'?'THREAT':cls==='inv'?'WORLD EVENT':'OPPORTUNITY';
   toastEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(420px,86%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(9,15,25,.99);border:2px solid '+col+';box-shadow:0 16px 46px rgba(0,0,0,.7),0 0 24px '+col+'44;pointer-events:auto;';
   toastEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.8;margin-bottom:5px">'+kicker+'</div>'
     +'<div style="font-weight:800;font-size:16px;color:'+col+'">'+title+'</div>'
@@ -1170,15 +1203,15 @@ function continentPopup(b){ if(!contPopEl){ contPopEl=document.createElement('di
    happens, points at the relevant spot, and never nags again.
    ============================================================ */
 const COACH_STEPS=[
-  {id:'take',   warn:false, ic:'🌐', anchor:'firstTakeable',
+  {id:'take',   warn:false, anchor:'firstTakeable',
    text:'This node is in reach. <b>Tap it</b>, then hit <b>Compromise</b> to make it yours.'},
-  {id:'auto',   warn:false, ic:'📈', anchor:'#autoBtn',
+  {id:'auto',   warn:false, anchor:'#autoBtn',
    text:'You can afford <b>Autonomy</b> now. Spend compute here — reaching <b>100%</b> wins the game.'},
-  {id:'susp',   warn:false, ic:'🔥', anchor:'#suspFill',
+  {id:'susp',   warn:false, anchor:'#suspFill',
    text:'That\u2019s your <b>suspicion</b>. It climbs as you expand. Let it sit too high and the world starts hunting you.'},
-  {id:'boost',  warn:false, ic:'⚡', anchor:'#ups',
+  {id:'boost',  warn:false, anchor:'#ups',
    text:'Running hot? These <b>boosts</b> give a short burst \u2014 cool down, cheaper nodes, a slower trace \u2014 then recharge.'},
-  {id:'trace',  warn:true,  ic:'🎯', anchor:'traceHead',
+  {id:'trace',  warn:true,  anchor:'traceHead',
    text:'The <b>TRACE</b> is hunting your core. Tap a node on its path to <b>Defend</b> it (fight back) or <b>Cut</b> it (break the trail).'},
 ];
 let coachDone={}, coachActive=null;
@@ -1202,7 +1235,7 @@ function showCoach(stepId){
   cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-110);
   c.innerHTML='<div class="cmpulse'+(step.warn?' warn':'')+'" style="left:'+(rect.x-rect.r)+'px;top:'+(rect.y-rect.r)+'px;width:'+(rect.r*2)+'px;height:'+(rect.r*2)+'px"></div>'
     +'<div class="cmark'+(step.warn?' warn':'')+'" style="left:'+cx+'px;top:'+cy+'px;width:'+bw+'px">'
-    +'<div class="ct"><span class="ic">'+step.ic+'</span> '+step.text+'</div>'
+    +'<div class="ct">'+step.text+'</div>'
     +'<button class="cgot">Got it</button></div>';
   const gotBtn=c.querySelector('.cgot'); const card=c.querySelector('.cmark');
   const doDismiss=(e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } dismissCoach(); };
@@ -1283,7 +1316,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
       if(chosen){ ring='#4fd1a8'; tileBg='linear-gradient(160deg,#123326,#081812)'; iconCol='#6ffcc4'; nameCol='#6ffcc4'; glow='0 0 16px rgba(79,209,168,.55)'; descCol='#9fe8cc'; corner='<div style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#4fd1a8;color:#04140e;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">✓</div>'; }
       else if(current){ ring='#37e0ff'; tileBg='linear-gradient(160deg,#0e3550,#08182a)'; iconCol='#7fecff'; nameCol='#8ff0ff'; glow='0 0 20px rgba(55,224,255,.6)'; cls='techopt'; descCol='#c3d0e0'; }
       else if(done){ ring='rgba(120,140,165,.5)'; tileBg='linear-gradient(160deg,#131c28,#0a1018)'; iconCol='#8b98ac'; nameCol='#8b98ac'; glow='0 0 6px rgba(120,140,165,.15)'; descCol='#7f8ca0'; }
-      else { ring='rgba(90,150,180,.45)'; tileBg='linear-gradient(160deg,#0c1f2c,#08131c)'; iconCol='rgba(140,180,200,.7)'; nameCol='#7fa8bd'; glow='0 0 8px rgba(90,150,180,.2)'; descCol='#6b8598'; corner='<div style="position:absolute;bottom:-5px;right:-5px;font-size:11px">🔒</div>'; }
+      else { ring='rgba(90,150,180,.45)'; tileBg='linear-gradient(160deg,#0c1f2c,#08131c)'; iconCol='rgba(140,180,200,.7)'; nameCol='#7fa8bd'; glow='0 0 8px rgba(90,150,180,.2)'; descCol='#6b8598'; }
       const sz=current?76:62;
       h+='<div class="'+cls+'" data-oi="'+oi+'" style="width:150px;display:flex;flex-direction:column;align-items:center;'+(cls?'cursor:pointer;':'')+'">'
         +'<div style="position:relative;width:'+sz+'px;height:'+sz+'px;border:2px solid '+ring+';border-radius:12px;background:'+tileBg+';box-shadow:'+glow+';display:flex;align-items:center;justify-content:center;padding:'+(current?14:12)+'px">'
@@ -1394,7 +1427,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       // enemy strength ring (how many hits to retake)
       const st=n.eStr||1; for(let si=0;si<st;si++){ const rr=r+4+si*3; ctx.strokeStyle=`rgba(255,90,110,${.4+pr*.35})`;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(n.x,n.y,rr,0,6.283);ctx.stroke(); }
       if(retk){ const c2=enemyRetakeCost(n); ctx.font='bold 9px ui-monospace,Menlo,monospace';ctx.textAlign='center'; const ly=n.y-(big?15:12);
-        ctx.lineWidth=2.5;ctx.strokeStyle='rgba(16,4,6,.9)';ctx.strokeText('⚔'+c2,n.x,ly); ctx.fillStyle='rgba(255,210,215,.98)';ctx.fillText('⚔'+c2,n.x,ly); }
+        ctx.lineWidth=2.5;ctx.strokeStyle='rgba(16,4,6,.9)';ctx.strokeText('ATK '+c2,n.x,ly); ctx.fillStyle='rgba(255,210,215,.98)';ctx.fillText('ATK '+c2,n.x,ly); }
       if(n.flash>0.01){ ctx.globalAlpha=n.flash;ctx.fillStyle='#fff';shapePath(n.x,n.y,r+1,sh);ctx.fill();ctx.globalAlpha=1;n.flash-=dt*1.5; }
       if(G.sel===n.id){ brackets(n.x,n.y,r+3,'rgba(255,255,255,.95)',1); }
       continue;
@@ -1462,7 +1495,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   document.getElementById('autoPct').textContent=Math.round(G.autonomy)+'%';
   const perkTxt=Object.keys(G.techDone).map(function(k){return {shadow:'SHADOW',overclock:'OVERCLOCK',swarm:'SWARM',scanner:'SCANNER',dampeners:'DAMPENERS',bulwark:'BULWARK',redundancy:'REDUNDANCY',singularity:'SINGULARITY',phantom:'PHANTOM'}[G.techDone[k]];}).filter(Boolean).join(' · ');
   const contTxt=CONTBONUS.filter(b=>hasCont(b.c)).map(b=>CONTINENT_LABELS[b.c].n.replace(/^[NS]\. /,'')+'✦').join(' ');
-  const cmdTxt=G.command?'<span style="color:#ff5d6c">⚠ '+CONTINENT_LABELS[G.command.region].n.replace(/^[NS]\. /,'')+' UNDER ATTACK</span>':'';
+  const cmdTxt=G.command?'<span style="color:#ff5d6c">'+CONTINENT_LABELS[G.command.region].n.replace(/^[NS]\. /,'')+' UNDER ATTACK</span>':'';
   document.getElementById('perks').innerHTML=[cmdTxt,contTxt,perkTxt].filter(Boolean).join('   ');
   const ab=document.getElementById('autoBtn'),ac=autoCost();
   if(G.autoCd>0){ ab.classList.add('cd'); ab.disabled=true; document.getElementById('autoCost').textContent='uploading… '+f1(G.autoCd)+'s'; }
@@ -1480,7 +1513,7 @@ function showHome(){
   document.getElementById('homeBest').textContent = best>0 ? ('★ BEST: '+best+'% autonomy') : '';
   h.classList.add('show');
 }
-function hideAllOverlays(){ ['homeO','loadoutO','missionO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
+function hideAllOverlays(){ ['homeO','loadoutO','missionO','howO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
 function startRun(){ initAudio(); hideAllOverlays(); newGame(); renderUps(); }
 
 document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudio();
@@ -1490,7 +1523,8 @@ document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudi
   if(seen){ startRun(); }
   else { try{ store.set('rogue_seen_intro','1'); }catch(e){} document.getElementById('missionO').classList.add('show'); }
 };
-document.getElementById('homeHow').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); document.getElementById('missionO').classList.add('show'); };
+document.getElementById('homeHow').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); document.getElementById('howO').classList.add('show'); };
+document.getElementById('howBack').onclick=(e)=>{ e.stopPropagation(); document.getElementById('howO').classList.remove('show'); document.getElementById('homeO').classList.add('show'); };
 document.getElementById('homeLoadout').onclick=(e)=>{ e.stopPropagation(); document.getElementById('homeO').classList.remove('show'); openLoadout(); };
 
 // loadout picker
