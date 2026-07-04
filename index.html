@@ -14,7 +14,7 @@
   #frame{position:fixed;inset:0;overflow:hidden;background:#04060c;}
   #net{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
   .tapmark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(55,224,255,.9);border-radius:50%;
-    pointer-events:none;z-index:9;animation:tapping .45s ease-out forwards;}
+    pointer-events:none;z-index:9;animation:tapping .8s ease-out forwards;}
   @keyframes tapping{0%{transform:scale(.5);opacity:.95;}100%{transform:scale(1.6);opacity:0;}}
   #scan{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.55;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0px,rgba(0,0,0,.16) 1px,transparent 1px,transparent 3px);}
@@ -309,7 +309,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.16.1';
+const GAME_VERSION='1.16.2';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1187,16 +1187,14 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
   for(const n of NODES){ n.x=projX(n.lon); n.y=projY(n.lat); }
   buildBasemap(); }
 window.addEventListener('resize',layout);
-function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const r=cvs.getBoundingClientRect();
-  // when the frame is rotated 90°, map viewport coords into the frame's landscape space,
-  // then normalize by the measured on-screen size — if the viewport changed since the last
-  // layout() the canvas bitmap is CSS-scaled and raw coords would miss the nodes
-  let px=ROT?(cy-r.top):(cx-r.left), py=ROT?(r.right-cx):(cy-r.top);
-  const vw=ROT?r.height:r.width, vh=ROT?r.width:r.height;
-  if(vw>0&&vh>0){ px*=CSSW/vw; py*=CSSH/vh; }
+function tap(ox,oy){ if(G.over||G.ack||G.choice||G.techPick!=null)return;
+  // ox/oy are offsetX/offsetY — computed by the browser relative to the canvas box,
+  // immune to iOS visual-viewport scroll/zoom drift; normalize to bitmap coords
+  let px=ox,py=oy; const bw=cvs.clientWidth,bh=cvs.clientHeight;
+  if(bw>0&&bh>0){ px*=CSSW/bw; py*=CSSH/bh; }
   // visible ring at the registered touch point — instant feedback that aim matches finger
   { const m=document.createElement('div'); m.className='tapmark'; m.style.left=px+'px'; m.style.top=py+'px';
-    document.getElementById('frame').appendChild(m); setTimeout(()=>m.remove(),500); }
+    document.getElementById('frame').appendChild(m); setTimeout(()=>m.remove(),900); }
   // pick within reach, preferring nodes you can act on — a locked hub shouldn't
   // steal the tap from the small relay next to it
   let best=null,bd=1e9;
@@ -1207,9 +1205,11 @@ function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const 
   if(!best){ G.sel=-1; showPanel(); return; }
   G.sel=best.id; showPanel(); }
 /* one modern input path — pointer events keep mouse and touch coordinates consistent */
-cvs.addEventListener('pointerdown',e=>{ e.preventDefault(); tap(e.clientX,e.clientY); });
+cvs.addEventListener('pointerdown',e=>{ e.preventDefault(); tap(e.offsetX,e.offsetY); });
 /* block pinch-zoom during gameplay: a zoomed page desyncs touch coords from the map */
 document.addEventListener('gesturestart',e=>{ if(!anyMenuShown()) e.preventDefault(); });
+/* iOS can still nudge the document despite overflow:hidden — pin it, drifting desyncs touch */
+window.addEventListener('scroll',()=>{ if(window.scrollX||window.scrollY) window.scrollTo(0,0); },{passive:true});
 function floatAt(n,txt,col){ const f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.color=col;
   f.style.left=(n.x-16)+'px'; f.style.top=(n.y-12)+'px'; document.getElementById('frame').appendChild(f); setTimeout(()=>f.remove(),1000); }
 function banner(cls,html){ const el=document.getElementById('banner'); el.className=cls; el.innerHTML=html; el.style.opacity='1'; G.bannerT=6; }
