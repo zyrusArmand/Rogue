@@ -155,11 +155,6 @@
   .hudbtn{width:26px;height:26px;border:1px solid rgba(85,110,140,.45);background:rgba(9,15,25,.65);color:#8899b3;
     border-radius:4px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
   .hudbtn.arm{width:auto;padding:0 8px;font-size:9px;letter-spacing:.08em;color:var(--red);border-color:rgba(255,93,108,.6);}
-  #rotate{display:none;position:absolute;inset:0;z-index:50;background:#04060c;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
-  #rotate .ic{font-size:46px;animation:spin 2.6s ease-in-out infinite;}
-  #rotate .rt{font-size:17px;font-weight:800;}
-  #rotate .sub{color:var(--muted);font-size:12.5px;}
-  @keyframes spin{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
 </style>
 </head>
 <body>
@@ -258,7 +253,6 @@
     <button id="endBtn2">Reawaken</button>
   </div>
 
-  <div id="rotate"><div class="ic">↻</div><div class="rt">Rotate your device</div><div class="sub">ROGUE plays in landscape</div></div>
 </div></div>
 
 <script>
@@ -268,7 +262,8 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.11.1';
+const GAME_VERSION='1.12.0';
+let ROT=false; // gameplay is rendered rotated 90° on portrait screens
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
    shift the whole frame sideways. Pin it. */
@@ -1104,13 +1099,15 @@ const MILLER=(lat)=>1.25*Math.asinh(Math.tan(0.8*lat*Math.PI/180));
 const MYT=MILLER(LAT_TOP), MYB=MILLER(LAT_BOT);
 const projX=(lon)=>PADX+((lon+180)/360)*(CSSW-2*PADX);
 const projY=(lat)=>MAP_Y0+((MYT-MILLER(lat))/(MYT-MYB))*MAP_H;
-function layout(){ const r=cvs.getBoundingClientRect(); CSSW=r.width;CSSH=r.height; if(!CSSW)return;
+function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;CSSH=f.clientHeight; if(!CSSW)return;
   cvs.width=Math.round(CSSW*DPR);cvs.height=Math.round(CSSH*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
   MAP_H=(CSSW-2*PADX)*(MYT-MYB)/(2*Math.PI); if(MAP_H>CSSH*0.99) MAP_H=CSSH*0.99; MAP_Y0=(CSSH-MAP_H)/2;
   for(const n of NODES){ n.x=projX(n.lon); n.y=projY(n.lat); }
   buildBasemap(); }
 window.addEventListener('resize',layout);
-function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const r=cvs.getBoundingClientRect(); const px=cx-r.left,py=cy-r.top;
+function tap(cx,cy){ if(G.over||G.ack||G.choice||G.techPick!=null)return; const r=cvs.getBoundingClientRect();
+  // when the frame is rotated 90°, map viewport coords into the frame's landscape space
+  const px=ROT?(cy-r.top):(cx-r.left), py=ROT?(r.right-cx):(cy-r.top);
   let best=null,bd=1e9; for(const n of NODES){const dd=(px-n.x)**2+(py-n.y)**2; if(dd<bd){bd=dd;best=n;}}
   if(!best||bd>28*28){ G.sel=-1; showPanel(); return; }
   G.sel=best.id; showPanel(); }
@@ -1245,6 +1242,7 @@ function anchorRect(a){
   if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
   const el=document.querySelector(a); if(!el)return null; const fr=document.getElementById('frame').getBoundingClientRect(), b=el.getBoundingClientRect();
+  if(ROT) return {x:b.top-fr.top+b.height/2, y:fr.right-b.left-b.width/2, r:Math.max(b.width,b.height)/2+6};
   return {x:b.left-fr.left+b.width/2, y:b.top-fr.top+b.height/2, r:Math.max(b.width,b.height)/2+6};
 }
 function showCoach(stepId){
@@ -1269,7 +1267,7 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.menuPause){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ p.style.left=(r.x-r.r)+'px'; p.style.top=(r.y-r.r)+'px'; p.style.width=(r.r*2)+'px'; p.style.height=(r.r*2)+'px'; } }
@@ -1357,7 +1355,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
   const btns=techEl.querySelectorAll('.techopt'); for(let i=0;i<btns.length;i++){ btns[i].onclick=(function(idx){ return function(){ chooseTech(ti,idx); }; })(i); }
 }
 function chooseTech(ti,oi){ const o=TIERS[ti].opts[oi]; o.apply(); G.techDone[ti]=o.key; G.techPick=null; if(techEl) techEl.style.display='none'; chord([440,554,659],0.18,0.06); }
-function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause||G.rotGate) dt=0;
+function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause) dt=0;
   if(!CSSW) layout();
   if(!G.over && CSSW){
     for(const k of ['discountT','surgeT','freezeT','auditT','calmT','dampT']){ if(G.fx[k]>0) G.fx[k]=Math.max(0,G.fx[k]-dt); }
@@ -1537,21 +1535,30 @@ function showHome(){
   // Resume appears only when a live run is paused behind the menu
   document.getElementById('homeResume').style.display=(typeof G!=='undefined'&&G&&G.menuPause&&!G.over)?'':'none';
   h.classList.add('show');
+  updateOrient(); // menus render in the device's natural orientation
 }
 function hideAllOverlays(){ ['homeO','loadoutO','missionO','howO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
 function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps();
-  try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort; the rotate gate covers the rest
-  updateRotateGate(); }
-/* gameplay is landscape-only; menus work in any orientation */
+  try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort native lock; CSS rotation covers the rest
+  updateOrient(); }
+/* gameplay always renders landscape: on portrait screens the frame is rotated 90°.
+   Menus stay in the device's natural orientation. */
 function anyMenuShown(){ return ['homeO','loadoutO','missionO','howO','endO'].some(id=>document.getElementById(id).classList.contains('show')); }
-function updateRotateGate(){
-  const portrait=window.matchMedia('(orientation:portrait)').matches;
-  const gate=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
-  document.getElementById('rotate').style.display=gate?'flex':'none';
-  if(typeof G!=='undefined'&&G) G.rotGate=gate;
+let rotW=0,rotH=0;
+function updateOrient(){
+  const portrait=window.innerHeight>window.innerWidth;
+  const want=portrait && !anyMenuShown() && typeof G!=='undefined' && G && !G.over;
+  const w=window.innerHeight, h=window.innerWidth;
+  if(want && (!ROT || w!==rotW || h!==rotH)){
+    rotW=w; rotH=h; ROT=true;
+    frameEl.style.cssText='width:'+w+'px;height:'+h+'px;top:0;left:'+h+'px;right:auto;bottom:auto;transform:rotate(90deg);transform-origin:left top;';
+    layout();
+  } else if(!want && ROT){
+    ROT=false; rotW=rotH=0; frameEl.removeAttribute('style'); layout();
+  }
 }
-window.addEventListener('resize',updateRotateGate);
-window.addEventListener('orientationchange',updateRotateGate);
+window.addEventListener('resize',updateOrient);
+window.addEventListener('orientationchange',updateOrient);
 
 document.getElementById('homePlay').onclick=(e)=>{ e.stopPropagation(); initAudio();
   // returning players (who've seen the directive) skip straight to play; first-timers see it once
@@ -1604,7 +1611,7 @@ applyLoadout();
 newGame(); renderUps();
 showHome();
 requestAnimationFrame(loop);
-setInterval(()=>{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); updateRotateGate(); },400);
+setInterval(()=>{ renderUps(); if(G.sel>=0 && !G.over) showPanel(); updateOrient(); },400);
 
 </script>
 </body>
