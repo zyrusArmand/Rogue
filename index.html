@@ -139,7 +139,7 @@
   /* scan lines: one sweep across the frame, fade out at the wall, return a few seconds later */
   #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;opacity:0;
     background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 4.4s linear infinite;pointer-events:none;}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 4.6s linear infinite;pointer-events:none;}
   @keyframes scanBar{
     0%{left:2px;opacity:0;}
     4%{opacity:1;}
@@ -148,12 +148,12 @@
     100%{left:calc(100% - 4px);opacity:0;}}
   #titleBarH{position:absolute;left:4px;right:4px;height:2px;top:2px;opacity:0;
     background:linear-gradient(90deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 5.2s linear infinite;animation-delay:1.2s;pointer-events:none;}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 4.6s linear infinite;pointer-events:none;}
   @keyframes scanBarH{
     0%{top:2px;opacity:0;}
     4%{opacity:1;}
-    38%{opacity:1;}
-    42%{top:calc(100% - 4px);opacity:0;}
+    42%{opacity:1;}
+    46%{top:calc(100% - 4px);opacity:0;}
     100%{top:calc(100% - 4px);opacity:0;}}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
@@ -272,7 +272,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.13.1';
+const GAME_VERSION='1.14.0';
 let ROT=false; // gameplay is rendered rotated 90° on portrait screens
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -1421,7 +1421,10 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
 
   if(G.over){ if(choiceEl && choiceEl.style.display!=='none') choiceEl.style.display='none'; if(toastEl && toastEl.style.display!=='none') toastEl.style.display='none'; if(cmdPopEl && cmdPopEl.style.display!=='none') cmdPopEl.style.display='none'; if(breachEl && breachEl.style.display!=='none') breachEl.style.display='none'; G.breach=null; G.ack=false; }
   // screen shake (decays fast) — applied to the whole frame for punch on big moments
-  if(shakeAmt>0.002){ const fr=document.getElementById('frame'); const m=shakeAmt*7; fr.style.transform='translate('+((Math.random()*2-1)*m).toFixed(1)+'px,'+((Math.random()*2-1)*m).toFixed(1)+'px)'; shakeAmt=Math.max(0,shakeAmt-dt*3.2); if(shakeAmt<=0.002) fr.style.transform=''; }
+  if(shakeAmt>0.002){ const fr=document.getElementById('frame'); const m=shakeAmt*7;
+    // compose with the portrait rotation — overwriting it un-rotates the frame and blacks out the screen
+    const base=ROT?'rotate(90deg) ':'';
+    fr.style.transform=base+'translate('+((Math.random()*2-1)*m).toFixed(1)+'px,'+((Math.random()*2-1)*m).toFixed(1)+'px)'; shakeAmt=Math.max(0,shakeAmt-dt*3.2); if(shakeAmt<=0.002) fr.style.transform=ROT?'rotate(90deg)':''; }
   // draw
   ctx.clearRect(0,0,CSSW,CSSH);
   if(!baseCvs) buildBasemap();
@@ -1594,7 +1597,8 @@ document.getElementById('menuBtn').onclick=()=>{ if(G.over) return;
 document.getElementById('homeResume').onclick=(e)=>{ e.stopPropagation();
   G.menuPause=false;
   document.getElementById('homeResume').style.display='none';
-  document.getElementById('homeO').classList.remove('show'); };
+  document.getElementById('homeO').classList.remove('show');
+  updateOrient(); /* re-rotate immediately — waiting for the next tick flashes a portrait frame */ };
 let rstArm=0;
 document.getElementById('restartBtn').onclick=()=>{ const b=document.getElementById('restartBtn');
   if(rstArm){ clearTimeout(rstArm); rstArm=0; b.classList.remove('arm'); b.textContent='↺'; startRun(); }
