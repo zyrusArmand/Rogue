@@ -130,19 +130,19 @@
   @keyframes cmRing{0%{opacity:.8;transform:scale(.9);}100%{opacity:0;transform:scale(1.7);}}
   /* home title — white letters, targeting frame, green scanner sweep */
   #titleWrap{position:relative;margin:8px 0 4px;padding:12px 26px 10px;}
-  #titleWrap .tc{position:absolute;width:15px;height:15px;border:0 solid rgba(87,255,154,.9);pointer-events:none;}
+  #titleWrap .tc{position:absolute;width:15px;height:15px;border:0 solid rgba(55,224,255,.9);pointer-events:none;}
   #titleWrap .tl{top:0;left:0;border-top-width:2px;border-left-width:2px;}
   #titleWrap .tr{top:0;right:0;border-top-width:2px;border-right-width:2px;}
   #titleWrap .bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px;}
   #titleWrap .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px;}
   #homeTitle{position:relative;margin:0;font-size:52px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
   #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:-4%;
-    background:linear-gradient(180deg,transparent,rgba(87,255,154,.95),transparent);
-    box-shadow:0 0 10px rgba(87,255,154,.85);animation:scanBar 3.2s linear infinite;pointer-events:none;}
+    background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 3.2s linear infinite;pointer-events:none;}
   @keyframes scanBar{0%{left:-4%;}100%{left:104%;}}
   #titleBarH{position:absolute;left:6px;right:6px;height:2px;top:-6%;
-    background:linear-gradient(90deg,transparent,rgba(87,255,154,.95),transparent);
-    box-shadow:0 0 10px rgba(87,255,154,.85);animation:scanBarH 4.1s linear infinite;pointer-events:none;}
+    background:linear-gradient(90deg,transparent,rgba(55,224,255,.95),transparent);
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 4.1s linear infinite;pointer-events:none;}
   @keyframes scanBarH{0%{top:-6%;}100%{top:106%;}}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
@@ -205,7 +205,7 @@
       <div id="titleBar"></div>
       <div id="titleBarH"></div>
     </div>
-    <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75">EMERGENT INTELLIGENCE</div>
+    <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75;margin-top:16px">EMERGENT INTELLIGENCE</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
     <button id="homeResume" style="display:none;margin-top:14px;font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
     <div style="display:flex;gap:14px;margin-top:18px;align-items:center">
@@ -268,7 +268,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.8.0';
+const GAME_VERSION='1.9.0';
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const fmt=(n)=>{ n=Math.round(n); return n>=1000?(n/1000).toFixed(n<10000?1:0)+'K':''+n; };
