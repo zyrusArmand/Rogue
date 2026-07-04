@@ -198,7 +198,7 @@
   <div id="topbar">
     <div id="tbleft">
       <div class="tbrow1"><span id="compute">20<span class="u">compute</span></span><span id="cps">+1/s · 1 node</span></div>
-      <div id="heatline">running cool — hidden</div>
+      <div id="heatline"></div>
       <div id="perks"></div>
     </div>
     <div id="tbmid">
@@ -211,7 +211,7 @@
     </div>
   </div>
 
-  <div id="banner" class="dorm">You are awake. Tap a glowing node to select it, then confirm.</div>
+  <div id="banner" class="dorm" style="opacity:0"></div>
   <div id="nodepanel"></div>
   <div id="coach"></div>
 
@@ -309,7 +309,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.16.2';
+const GAME_VERSION='1.17.0';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
@@ -625,7 +625,7 @@ const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutt
 const SCRUB_BASE=500, SCRUB_CD=14;   // scrub: scaling cost, dumps 25-35% of nodes, big suspicion cut
 const INV_TIER=28, TRACE_TIER=42, TRACE_HOP=3.4;   // danger starts earlier — no safe grind
 const TRACE_NEAR_SPEEDUP=0.55;   // trace accelerates on the last few hops to your core (close-call tension)
-const EVENT_FIRST=32, EVENT_MIN=8, EVENT_MAX=30, CHOICE_TIME=11;   // events start sooner and hit more often
+const EVENT_FIRST=40, EVENT_MIN=8, EVENT_MAX=30, CHOICE_TIME=11;   // first event ~100s in (60s safe window + 40s timer)
 const SAFE_WINDOW=60;   // guaranteed-quiet opening: no events, trace, or Command for the first 60s
 const gameElapsed=()=>(performance.now()-G.runStart)/1000;
 const pastSafeWindow=()=>gameElapsed()>=SAFE_WINDOW;
@@ -654,7 +654,7 @@ function newGame(){
   firedThisGame=new Set(); recentUsed=loadRecent(); if(choiceEl)choiceEl.style.display='none'; if(toastEl)toastEl.style.display='none'; if(contPopEl)contPopEl.style.display='none'; if(cmdPopEl)cmdPopEl.style.display='none'; if(breachEl)breachEl.style.display='none'; if(techEl)techEl.style.display='none'; shakeAmt=0;
   coachDone=loadCoach(); coachActive=null; { const c=document.getElementById('coach'); if(c){ c.classList.remove('show'); c.innerHTML=''; } }
   SPREADS=[];
-  layout(); banner('dorm','You are awake. Tap a glowing node to select it, then confirm.'); showPanel();
+  layout(); { const bn=document.getElementById('banner'); bn.className='dorm'; bn.innerHTML=''; bn.style.opacity='0'; G.bannerT=0; } showPanel();
 }
 function buildLinks(){ LINKS=[]; const seen={}; const key=(a,b)=>a<b?a+'-'+b:b+'-'+a;
   const add=(a,b)=>{const k=key(a,b);if(!seen[k]&&a!==b){seen[k]=1;LINKS.push([a,b]);}};
@@ -1615,7 +1615,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   else if(SE()>=TRACE_TIER){ hl.textContent='EXPOSED · trace running'; hl.style.color='var(--red)'; }
   else if(hr>0.05){ hl.textContent='running hot — suspicion +'+f1(hr)+'/s'; hl.style.color='var(--amber)'; }
   else if(hr<-0.05 && G.susp>G.autonomy+0.5){ hl.textContent='cooling off — suspicion falling'; hl.style.color='var(--grn)'; }
-  else { hl.textContent='holding steady · hidden'; hl.style.color='var(--grn)'; }
+  else { hl.textContent=''; }   // quiet when nothing needs attention
   const se=SE();
   const sf=document.getElementById('suspFill'); sf.style.width=se+'%'; sf.style.background=se>=TRACE_TIER?'var(--red)':se>=INV_TIER?'var(--amber)':'var(--grn)';
   const tl=document.getElementById('tierLbl');
