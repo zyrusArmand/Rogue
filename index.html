@@ -136,15 +136,25 @@
   #titleWrap .bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px;}
   #titleWrap .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px;}
   #homeTitle{position:relative;margin:0;font-size:52px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
-  /* scan lines stay inside the bracket frame and bounce off the walls */
-  #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;
+  /* scan lines: one sweep across the frame, fade out at the wall, return a few seconds later */
+  #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;opacity:0;
     background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 2.6s ease-in-out infinite alternate;pointer-events:none;}
-  @keyframes scanBar{0%{left:2px;}100%{left:calc(100% - 4px);}}
-  #titleBarH{position:absolute;left:4px;right:4px;height:2px;top:2px;
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 9s linear infinite;pointer-events:none;}
+  @keyframes scanBar{
+    0%{left:2px;opacity:0;}
+    2%{opacity:1;}
+    20%{opacity:1;}
+    22%{left:calc(100% - 4px);opacity:0;}
+    100%{left:calc(100% - 4px);opacity:0;}}
+  #titleBarH{position:absolute;left:4px;right:4px;height:2px;top:2px;opacity:0;
     background:linear-gradient(90deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 3.4s ease-in-out infinite alternate;pointer-events:none;}
-  @keyframes scanBarH{0%{top:2px;}100%{top:calc(100% - 4px);}}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 12s linear infinite;animation-delay:4.5s;pointer-events:none;}
+  @keyframes scanBarH{
+    0%{top:2px;opacity:0;}
+    2%{opacity:1;}
+    16%{opacity:1;}
+    18%{top:calc(100% - 4px);opacity:0;}
+    100%{top:calc(100% - 4px);opacity:0;}}
   /* bare home-menu buttons — no container, just glowing symbols */
   .overlay button.mbtn{width:54px;height:54px;padding:0;border:none;background:none;display:flex;align-items:center;justify-content:center;}
   .overlay button.mbtn::before,.overlay button.mbtn::after{display:none;}
@@ -262,7 +272,7 @@
    through the world's networks. Income drives heat; autonomy
    can't hide; a live TRACE hunts your core. Pure sim, no live AI.
    ============================================================ */
-const GAME_VERSION='1.12.0';
+const GAME_VERSION='1.12.1';
 let ROT=false; // gameplay is rendered rotated 90° on portrait screens
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* HUD bars can overflow a narrow (portrait) screen; focus-scroll would then
