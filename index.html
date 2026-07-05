@@ -215,6 +215,9 @@
   @keyframes slnIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
   .devrow{display:flex;justify-content:space-between;gap:22px;width:min(340px,82vw);font-size:11px;padding:4px 2px;border-bottom:1px solid rgba(85,110,140,.16);}
   .devrow .dl{color:var(--muted);} .devrow .dv{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;}
+  .devhdr{width:min(340px,82vw);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--cy);opacity:.85;margin:11px 0 3px;padding-bottom:3px;border-bottom:1px solid rgba(55,224,255,.28);}
+  .devnote{width:min(340px,82vw);font-size:9.5px;line-height:1.45;color:var(--muted);margin-top:13px;padding-top:9px;border-top:1px solid rgba(85,110,140,.2);}
+  .devnote b{color:var(--ink);}
   .bslot{width:110px;min-height:40px;border:1px solid rgba(55,224,255,.5);border-radius:9px;background:rgba(9,32,44,.7);padding:6px 8px;text-align:left;cursor:pointer;}
   .bslot.empty{border-style:dashed;border-color:var(--line);cursor:default;background:rgba(11,17,28,.55);}
   .bslot .bn{font-weight:800;font-size:10.5px;color:var(--cy);}
@@ -348,7 +351,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.65';
+const GAME_VERSION='1.66';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -703,7 +706,9 @@ function newGame(){
      trace:null, traceCD:0, choice:null, hbT:0, bannerT:0, perks:{}, techDone:{}, techPick:null, redundancy:skHas('d3')?1:0, patchT:PATCH_EVERY, autoCd:0, scrubCd:0, over:false, inflation:1,
      evT:EVENT_FIRST, fx:{discountT:0,surgeT:0,freezeT:0,auditT:0,auditC:-1,calmT:0,dampT:0},
      closeCalls:0, peakAuto:skHas('apex')?5:0, runStart:performance.now(), contHeld:{}, ack:false, command:null, cmdCleared:{}, breach:null,
-     spent:0, nodesBought:0};
+     spent:0, nodesBought:0,
+     // per-run analytics counters — rolled into lifetime stats at endGame
+     peakNodes:1, hitTrace:false, hitInv:false, breachesFaced:0, breachesWon:0, boostsUsed:0, scrubsUsed:0, fortifies:0, contRunHolds:0};
   firedThisGame=new Set(); recentUsed=loadRecent(); if(choiceEl)choiceEl.style.display='none'; if(toastEl)toastEl.style.display='none'; if(contPopEl)contPopEl.style.display='none'; if(cmdPopEl)cmdPopEl.style.display='none'; if(breachEl)breachEl.style.display='none'; if(techEl)techEl.style.display='none'; shakeAmt=0;
   coachDone=loadCoach(); coachActive=null; { const c=document.getElementById('coach'); if(c){ c.classList.remove('show'); c.innerHTML=''; } }
   SPREADS=[]; dispCompute=G.compute;
@@ -823,7 +828,7 @@ function doCompromise(n){
   if(!canTake(n)){ showPanel(); return; }
   const c=nodeCost(n); if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute — keep earning.'); return; }
   const src=n.adj.find(j=>NODES[j].owned);
-  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; G.inflation=Math.min(INFL_CAP,G.inflation*1.15); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
+  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; { const oc=NODES.filter(x=>x.owned).length; if(oc>G.peakNodes) G.peakNodes=oc; } G.inflation=Math.min(INFL_CAP,G.inflation*1.15); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
   if(src!==undefined) SPREADS.push({a:src,b:n.id,t:0});
   n.flash=1; n.cap=1;   // white pop + capture-ring burst
   floatAt(n,'+'+f1(TYPES[n.type].inc)+'/s',rgb(TYPES[n.type].col));
@@ -844,7 +849,7 @@ function doSell(n){
 function doFortify(n){
   if(!n.owned || n.id===START) return; const cap=FORT_MAX+(G.perks.bulwark?1:0); if((n.fort||0)>=cap) return;
   const c=fortCost(n); if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute to fortify.'); return; }
-  G.compute-=c; G.spent+=c; G.inflation=Math.min(INFL_CAP,G.inflation*1.03); n.fort=Math.min(cap,(n.fort||0)+(G.perks.bulwark?2:1)); n.pulse=1; beep(240+n.fort*40,0.08,0.05); jolt(0.2);
+  G.compute-=c; G.spent+=c; G.fortifies++; G.inflation=Math.min(INFL_CAP,G.inflation*1.03); n.fort=Math.min(cap,(n.fort||0)+(G.perks.bulwark?2:1)); n.pulse=1; beep(240+n.fort*40,0.08,0.05); jolt(0.2);
   floatAt(n,'FORT '+n.fort,'#37e0ff'); showPanel();
 }
 // siege an enemy-held node: each attack costs compute and knocks its strength down; break it to reclaim
@@ -876,13 +881,13 @@ document.getElementById('scrubBtn').onclick=()=>{ if(G.over)return;
   for(let i=pool.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=pool[i];pool[i]=pool[j];pool[j]=t; }
   for(let i=0;i<dumpN;i++){ const n=pool[i]; n.owned=false; n.defended=false; n.flash=1; }
   if(G.sel!==-1 && !NODES[G.sel].owned){ G.sel=-1; showPanel(); }
-  G.compute-=cost; G.spent+=cost; G.susp=clamp(G.susp*0.40 - dumpN*4, G.autonomy, 100); G.scrubCd=SCRUB_CD;
+  G.compute-=cost; G.spent+=cost; G.scrubsUsed++; G.susp=clamp(G.susp*0.40 - dumpN*4, G.autonomy, 100); G.scrubCd=SCRUB_CD;
   afterTopologyChange();
   banner(G.tier,'<b>Network purged.</b> '+(dumpN?'<b>'+dumpN+'</b> nodes burned to erase your tracks':'Logs wiped')+' \u2014 suspicion slashed, ground given up.');
 };
 function activateBoost(u){ const b=G.boost[u.id]; if(G.over||b.t>0||b.cd>0)return; const c=upCost(u);
   if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute for '+u.n+'.'); return; }
-  G.compute-=c; G.spent+=c;
+  G.compute-=c; G.spent+=c; G.boostsUsed++;
   if(u.id==='siphon'){ const gain=Math.max(30,Math.round(income()*8)); G.compute+=gain; floatAt(NODES[START],'+'+fmt(gain),'#37e0ff'); beep(300,0.1,0.06); b.cd=u.cd; renderUps(); return; }
   b.t=u.dur; renderUps(); }
 
@@ -986,7 +991,7 @@ function breachChoice(target){ openBreach(target, 'command'); }
 function doDefendTrace(n){ if(!G.trace || !(G.trace.path||[]).includes(n.id)) return; openBreach(n, 'trace'); }
 function openBreach(target, mode){
   const sc=BREACH_SCENARIOS[(Math.random()*BREACH_SCENARIOS.length)|0];
-  G.breach={target:target.id, sc, mode}; G.ack=true; beep(150,0.14,0.08);
+  G.breach={target:target.id, sc, mode}; G.ack=true; G.breachesFaced++; beep(150,0.14,0.08);
   target.flash=1;
   if(!breachEl){ breachEl=document.createElement('div'); breachEl.id='breachPop'; document.getElementById('frame').appendChild(breachEl); }
   const who = mode==='trace' ? 'The trace' : (G.command?G.command.name:'The agent');
@@ -1022,6 +1027,7 @@ function resolveBreach(pick){
   if(!G.breach)return; const {target,sc,mode}=G.breach; const n=NODES[target]; G.breach=null; eventBreather();
   const bsnap=statSnap();
   const won = pick===sc.right;
+  if(won) G.breachesWon++;
   const chosen = pick===0?sc.a:sc.b;
   if(mode==='trace'){
     if(won){ // trace broken AND node kept
@@ -1136,9 +1142,17 @@ let boostOwnedSet=(()=>{ let s; try{ s=new Set(JSON.parse(store.get('rogue_boost
   for(const id of DEFAULT_LOADOUT) s.add(id); return s; })();
 function saveBoosts(){ store.set('rogue_boosts',JSON.stringify([...boostOwnedSet])); }
 /* lifetime player analytics — updated at the end of every run, shown in the secret console */
-const STATS_ZERO={runs:0,wins:0,losses:0,totalTime:0,fastestWin:0,totalNodes:0,totalSpent:0,totalData:0,closeCalls:0,bestStreak:0,curStreak:0};
+const STATS_ZERO={runs:0,wins:0,losses:0,totalTime:0,fastestWin:0,totalNodes:0,totalSpent:0,totalData:0,closeCalls:0,bestStreak:0,curStreak:0,
+  sumPeak:0,maxNodesRun:0,longestRun:0,reachedTraceRuns:0,reachedInvRuns:0,breachesFaced:0,breachesWon:0,boostsUsed:0,scrubsUsed:0,fortifies:0,contHoldsEver:0,everWon:0,runsToFirstWin:0};
 function loadStats(){ try{ return Object.assign({},STATS_ZERO,JSON.parse(store.get('rogue_stats')||'{}')); }catch(e){ return Object.assign({},STATS_ZERO); } }
 function saveStats(s){ store.set('rogue_stats',JSON.stringify(s)); }
+/* retention meta: first seen, last seen, session count, distinct days played — kept in a
+   separate key so it never collides with the run-stats merge */
+function loadMeta(){ try{ const m=JSON.parse(store.get('rogue_meta')||'{}'); m.days=Array.isArray(m.days)?m.days:[]; return m; }catch(e){ return {days:[]}; } }
+function saveMeta(m){ try{ store.set('rogue_meta',JSON.stringify(m)); }catch(e){} }
+function trackSession(){ const m=loadMeta(), now=Date.now(); if(!m.first) m.first=now; m.last=now; m.sessions=(m.sessions||0)+1;
+  const day=Math.floor(now/86400000); if(m.days.indexOf(day)<0) m.days.push(day); saveMeta(m); }
+trackSession();   // one bump per page load — powers the retention rows in the console
 const RECENT_CAP=20;
 let recentUsed=[]; let firedThisGame=new Set();
 function loadRecent(){ try{ return JSON.parse(store.get('rogue_recent')||'[]'); }catch(e){ return []; } }
@@ -1443,7 +1457,20 @@ function endGame(win){ if(G.over)return; G.over=true; G.sel=-1; showPanel();
   { const st=loadStats(); st.runs++; st.totalTime+=secs;
     st.totalNodes+=(G.nodesBought||0); st.totalSpent+=Math.round(G.spent||0);
     st.totalData+=dataEarned; st.closeCalls+=cc;
+    // progression + feature-usage roll-up
+    st.sumPeak=(st.sumPeak||0)+pk;
+    st.maxNodesRun=Math.max(st.maxNodesRun||0, G.peakNodes||1);
+    st.longestRun=Math.max(st.longestRun||0, secs);
+    if(G.hitTrace) st.reachedTraceRuns=(st.reachedTraceRuns||0)+1;
+    if(G.hitInv||G.hitTrace) st.reachedInvRuns=(st.reachedInvRuns||0)+1;
+    st.breachesFaced=(st.breachesFaced||0)+(G.breachesFaced||0);
+    st.breachesWon=(st.breachesWon||0)+(G.breachesWon||0);
+    st.boostsUsed=(st.boostsUsed||0)+(G.boostsUsed||0);
+    st.scrubsUsed=(st.scrubsUsed||0)+(G.scrubsUsed||0);
+    st.fortifies=(st.fortifies||0)+(G.fortifies||0);
+    st.contHoldsEver=(st.contHoldsEver||0)+(G.contRunHolds||0);
     if(win){ st.wins++; st.curStreak++; st.bestStreak=Math.max(st.bestStreak,st.curStreak);
+      st.everWon=1; if(!st.runsToFirstWin) st.runsToFirstWin=st.runs;
       if(!st.fastestWin||secs<st.fastestWin) st.fastestWin=secs; }
     else { st.losses++; st.curStreak=0; }
     saveStats(st); }
@@ -1567,7 +1594,7 @@ function buildBasemap(){ if(!CSSW) return;
 function checkContinents(){
   if(!G||G.over) return;
   for(const b of CONTBONUS){ const now=controls(b.c), was=!!G.contHeld[b.c];
-    if(now&&!was){ G.contHeld[b.c]=1; G.contPulse=G.contPulse||{}; G.contPulse[b.c]=performance.now(); continentPopup(b); jolt(0.35); chord([392,523,659,784],0.22,0.07); }
+    if(now&&!was){ G.contHeld[b.c]=1; G.contRunHolds++; G.contPulse=G.contPulse||{}; G.contPulse[b.c]=performance.now(); continentPopup(b); jolt(0.35); chord([392,523,659,784],0.22,0.07); }
     else if(!now&&was){ G.contHeld[b.c]=0; banner('inv','<b style="color:var(--amber)">'+CONTINENT_LABELS[b.c].n+' LOST</b> — '+b.tag+' bonus gone.'); beep(180,0.16,0.08); }
   }
 }
@@ -1757,6 +1784,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       if(G.evT<=0 && performance.now()-lastUiTouch>6000){ fireEvent(); G.evT=EVENT_MIN+Math.random()*(EVENT_MAX-EVENT_MIN); } }
     if(G.choice){ G.choice.t-=dt; const cb=document.getElementById('chBar'); if(cb) cb.style.width=Math.max(0,G.choice.t/G.choice.max*100)+'%'; if(G.choice.t<=0) resolveChoice(G.choice.ev.timeoutPick||'b'); }
     const se=SE(); G.tier = se>=TRACE_TIER?'trace':se>=INV_TIER?'inv':'dorm';
+    if(G.tier==='trace') G.hitTrace=true; else if(G.tier==='inv') G.hitInv=true;
     if(se>=INV_TIER){ G.patchT-=dt; if(G.patchT<=0){ G.patchT=PATCH_EVERY; if(patchNode()) banner('inv','<b style="color:#ffcf5a">Security hardened a node.</b> Costs more to take now.'); } }
     else G.patchT=PATCH_EVERY;
     if(se>=TRACE_TIER){
@@ -1997,27 +2025,64 @@ document.getElementById('homeVer').addEventListener('click',()=>{
   if(++verTaps>=5){ verTaps=0; document.getElementById('homeO').classList.remove('show'); renderDev(); document.getElementById('devO').classList.add('show'); } });
 function fmtDur(s){ if(!s) return '—'; const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=Math.round(s%60);
   return (h?h+'h ':'')+(m?m+'m ':'')+(h?'':ss+'s'); }
+function fmtDate(ms){ if(!ms) return '—'; try{ return new Date(ms).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return '—'; } }
+function fmtAgo(ms){ if(!ms) return '—'; const d=Math.floor((Date.now()-ms)/86400000); return d<=0?'today':d===1?'yesterday':d+'d ago'; }
+function pct(a,b){ return b?Math.round(a/b*100)+'%':'—'; }
 function renderDev(){
-  const st=loadStats(); let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
+  const st=loadStats(), m=loadMeta(); let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
+  const runs=st.runs||0, dataSpent=Math.max(0,(st.totalData||0)-getData());
   const rows=[
-    ['Runs played', st.runs],
+    ['§','Retention'],
+    ['First seen', fmtDate(m.first)],
+    ['Last played', fmtAgo(m.last)+(m.last?' · '+fmtDate(m.last):'')],
+    ['Sessions opened', m.sessions||0],
+    ['Distinct days played', (m.days||[]).length],
+    ['Total playtime', fmtDur(st.totalTime)],
+    ['Longest single run', fmtDur(st.longestRun)],
+    ['Avg run length', runs?fmtDur(Math.round(st.totalTime/runs)):'—'],
+
+    ['§','Progression & difficulty'],
+    ['Runs played', runs],
     ['Wins / losses', st.wins+' / '+st.losses],
-    ['Win rate', st.runs?Math.round(st.wins/st.runs*100)+'%':'—'],
-    ['Best autonomy', best+'%'],
+    ['Win rate', pct(st.wins,runs)],
+    ['Ever won?', st.everWon?'yes':'not yet'],
+    ['Runs to first win', st.runsToFirstWin||'—'],
+    ['Best autonomy reached', best+'%'],
+    ['Avg peak autonomy', runs?Math.round(st.sumPeak/runs)+'%':'—'],
+    ['Furthest reach (nodes)', st.maxNodesRun||0],
+    ['Runs that hit RECON', st.reachedInvRuns+' ('+pct(st.reachedInvRuns,runs)+')'],
+    ['Runs that hit TRACE', st.reachedTraceRuns+' ('+pct(st.reachedTraceRuns,runs)+')'],
     ['Fastest win', fmtDur(st.fastestWin)],
     ['Best win streak', st.bestStreak],
-    ['Total playtime', fmtDur(st.totalTime)],
-    ['Avg run length', st.runs?fmtDur(Math.round(st.totalTime/st.runs)):'—'],
-    ['Nodes captured', st.totalNodes],
-    ['Compute spent', fmt(st.totalSpent)],
-    ['Close calls', st.closeCalls],
+
+    ['§','Engagement per run'],
+    ['Nodes captured (total)', st.totalNodes],
+    ['Avg nodes / run', runs?(st.totalNodes/runs).toFixed(1):'—'],
+    ['Close calls (traces cut)', st.closeCalls],
+    ['Avg close calls / run', runs?(st.closeCalls/runs).toFixed(1):'—'],
+
+    ['§','Feature usage'],
+    ['Boosts activated', st.boostsUsed],
+    ['Scrubs used', st.scrubsUsed],
+    ['Fortifies built', st.fortifies],
+    ['Continents held (total)', st.contHoldsEver],
+    ['Breaches faced', st.breachesFaced],
+    ['Breach win rate', pct(st.breachesWon,st.breachesFaced)],
+
+    ['§','Economy & meta'],
+    ['Compute spent (lifetime)', fmt(st.totalSpent)],
     ['DATA earned (lifetime)', st.totalData],
+    ['DATA spent (lifetime)', dataSpent],
     ['DATA balance', getData()],
+    ['Avg DATA / run', runs?Math.round(st.totalData/runs):'—'],
     ['Perks owned', skOwned.size+' / '+SKILLS.filter(s=>!s.bid).length],
     ['Boosts owned', boostOwnedSet.size+' / '+BOOST_POOL.length],
-    ['Version', 'v'+GAME_VERSION],
+    ['Build', 'v'+GAME_VERSION],
   ];
-  document.getElementById('devStats').innerHTML=rows.map(r=>'<div class="devrow"><span class="dl">'+r[0]+'</span><span class="dv">'+r[1]+'</span></div>').join('');
+  document.getElementById('devStats').innerHTML=rows.map(r=> r[0]==='§'
+    ? '<div class="devhdr">'+r[1]+'</div>'
+    : '<div class="devrow"><span class="dl">'+r[0]+'</span><span class="dv">'+r[1]+'</span></div>').join('')
+    + '<div class="devnote">These numbers are for <b>this device only</b> — they are not the whole player base. To see how everyone is doing, wire a live analytics backend (ask in the build chat).</div>';
   const rb=document.getElementById('devReset'); rb.textContent='Reset Progress'; devResetArm=0;
 }
 document.getElementById('devClose').onclick=()=>{ document.getElementById('devO').classList.remove('show'); showHome(); };
