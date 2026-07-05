@@ -161,15 +161,16 @@
   #titleWrap .br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px;}
   #homeTitle{position:relative;margin:0;font-size:64px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.28);}
   /* scan lines: one sweep across the frame, fade out at the wall, return a few seconds later */
-  #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:2px;opacity:0;
+  /* vertical sweep line travels RIGHT-TO-LEFT and slower than the horizontal one */
+  #titleBar{position:absolute;top:4px;bottom:4px;width:2px;left:calc(100% - 4px);opacity:0;
     background:linear-gradient(180deg,transparent,rgba(55,224,255,.95),transparent);
-    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 4.6s linear infinite;pointer-events:none;}
+    box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBar 7.2s linear infinite;pointer-events:none;}
   @keyframes scanBar{
-    0%{left:2px;opacity:0;}
+    0%{left:calc(100% - 4px);opacity:0;}
     4%{opacity:1;}
     42%{opacity:1;}
-    46%{left:calc(100% - 4px);opacity:0;}
-    100%{left:calc(100% - 4px);opacity:0;}}
+    46%{left:2px;opacity:0;}
+    100%{left:2px;opacity:0;}}
   #titleBarH{position:absolute;left:4px;right:4px;height:2px;top:2px;opacity:0;
     background:linear-gradient(90deg,transparent,rgba(55,224,255,.95),transparent);
     box-shadow:0 0 10px rgba(55,224,255,.85);animation:scanBarH 4.6s linear infinite;pointer-events:none;}
@@ -278,15 +279,18 @@
     </div>
     <div style="font-size:12px;letter-spacing:.4em;color:var(--cy);font-weight:700;opacity:.75;margin-top:16px">EMERGENT INTELLIGENCE</div>
     <div id="homeBest" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;min-height:14px"></div>
-    <button id="homeResume" style="display:none;margin-top:14px;font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
+    <div id="pauseRow" style="display:none;gap:12px;margin-top:14px;align-items:center;justify-content:center">
+      <button id="homeRestart" title="Restart run" style="font-size:16px;padding:9px 15px;color:var(--red)">↺</button>
+      <button id="homeResume" style="font-size:14px;padding:10px 40px;color:var(--grn)">▸ RESUME</button>
+    </div>
     <div style="flex:0 1 9vh"></div>
     <div style="display:flex;gap:14px;margin-top:18px;align-items:center">
       <button id="homeLoadout" class="mbtn" title="Tech Tree"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="4.5" r="2.1"/><circle cx="5" cy="19" r="2.1"/><circle cx="19" cy="19" r="2.1"/><path d="M12 7v5M12 12l-5.6 4.9M12 12l5.6 4.9"/></svg></button>
       <button id="homePlay" class="mbtn play" title="Play"><span class="tri">▶</span></button>
       <button id="homeHow" class="mbtn" title="How to Play"><span>?</span></button>
     </div>
+    <div id="homeVer" style="margin-top:16px;font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.85;padding:6px 16px"></div>
     <div style="margin-bottom:auto"></div>
-    <div id="homeVer" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(38px + env(safe-area-inset-bottom,0px));font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.85;padding:6px 14px"></div>
   </div>
 
   <div class="overlay" id="skillO">
@@ -351,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.66';
+const GAME_VERSION='1.67';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -628,18 +632,18 @@ const LABELS=[["CANADA",-95,61],["USA",-96,33],["BRAZIL",-47,-10],["ARGENTINA",-
 const OCEAN_LABELS=[["NORTH PACIFIC",-150,6],["SOUTH PACIFIC",-116,-34],["NORTH ATLANTIC",-45,22],["INDIAN OCEAN",86,-33]];
 /* nodes: [lon, lat, type, continentIndex] */
 const NODEDEF=[
- // N. America (0)
- [-150,64,'relay',0],[-122,50,'server',0],[-114,38,'relay',0],[-100,55,'relay',0],[-88,43,'server',0],[-81,28,'fin',0],[-70,45,'relay',0],[-98,40,'hub',0],[-107,23,'relay',0],[-135,27,'relay',0],[-60,48,'relay',0],[-90,32,'relay',0],
- // S. America (1)
- [-70,-10,'relay',1],[-54,-4,'server',1],[-45,-22,'fin',1],[-71,-38,'relay',1],[-63,-29,'relay',1],[-60,-15,'hub',1],[-73,5,'relay',1],[-48,-12,'relay',1],[-67,-48,'server',1],
- // Europe (2)
- [-6,40,'relay',2],[3,49,'server',2],[16,45,'relay',2],[10,61,'relay',2],[27,51,'fin',2],[-3,55,'relay',2],[37,59,'relay',2],[22,42,'hub',2],[43,50,'relay',2],[9,54,'server',2],
- // Africa (3)
- [-9,14,'relay',3],[10,6,'server',3],[31,24,'relay',3],[43,10,'fin',3],[16,-8,'relay',3],[28,-29,'server',3],[47,-19,'relay',3],[24,0,'hub',3],[2,33,'relay',3],[37,-4,'relay',3],[8,-22,'relay',3],
- // Asia (4)
- [44,34,'relay',4],[58,45,'relay',4],[72,19,'server',4],[81,40,'relay',4],[90,26,'fin',4],[105,11,'relay',4],[115,34,'server',4],[128,41,'relay',4],[139,36,'server',4],[132,57,'relay',4],[96,61,'relay',4],[66,57,'relay',4],[108,48,'hub',4],[76,29,'relay',4],[122,20,'fin',4],[88,49,'relay',4],
- // Oceania (5)
- [116,-24,'relay',5],[145,-22,'server',5],[150,-35,'fin',5],[173,-42,'relay',5],[121,-4,'relay',5],[133,-28,'hub',5],[147,-8,'relay',5],[161,-10,'server',5],[135,-40,'relay',5],
+ // N. America (0) — coasts + interior, well spread
+ [-150,63,'relay',0],[-127,52,'server',0],[-121,37,'relay',0],[-110,44,'relay',0],[-100,57,'relay',0],[-95,42,'hub',0],[-96,30,'fin',0],[-81,28,'fin',0],[-74,42,'server',0],[-72,52,'relay',0],[-103,24,'relay',0],[-96,17,'relay',0],[-88,38,'server',0],[-84,10,'relay',0],
+ // S. America (1) — both coasts + far south
+ [-74,5,'relay',1],[-64,8,'server',1],[-77,-10,'relay',1],[-40,-8,'server',1],[-52,-12,'hub',1],[-46,-23,'fin',1],[-64,-17,'relay',1],[-64,-34,'relay',1],[-70,-45,'relay',1],[-79,-2,'relay',1],
+ // Europe (2) — Iberia to the Urals, edges emphasised
+ [-4,40,'relay',2],[-2,54,'server',2],[2,47,'relay',2],[10,62,'relay',2],[12,51,'hub',2],[13,42,'fin',2],[22,44,'relay',2],[20,53,'server',2],[31,49,'relay',2],[40,56,'relay',2],[26,61,'relay',2],
+ // Africa (3) — coastlines all round + interior
+ [-7,32,'relay',3],[-12,12,'relay',3],[7,7,'server',3],[20,2,'hub',3],[30,26,'relay',3],[43,8,'server',3],[38,-1,'relay',3],[16,-10,'relay',3],[25,-5,'relay',3],[26,-29,'fin',3],[47,-19,'relay',3],[30,14,'relay',3],
+ // Asia (4) — Middle East, India, Siberia, China, SE-Asia islands, Japan
+ [35,39,'relay',4],[45,24,'fin',4],[53,32,'relay',4],[66,48,'relay',4],[73,19,'server',4],[78,12,'relay',4],[90,24,'fin',4],[70,60,'relay',4],[80,45,'hub',4],[105,47,'relay',4],[118,32,'server',4],[106,14,'relay',4],[110,-2,'server',4],[122,14,'relay',4],[139,37,'server',4],[135,55,'relay',4],[67,30,'relay',4],[100,7,'relay',4],
+ // Oceania (5) — Australia coasts, NZ, Pacific islands
+ [135,-4,'relay',5],[122,-20,'relay',5],[133,-13,'relay',5],[151,-30,'fin',5],[145,-38,'server',5],[134,-25,'hub',5],[116,-31,'relay',5],[174,-41,'relay',5],[166,-20,'server',5],[160,-8,'relay',5],
 ];
 const CADJ=[[0,1],[0,2],[0,4],[1,3],[2,3],[2,4],[3,4],[4,5]];
 let START=0; const UNLOCK=3;
@@ -1972,13 +1976,15 @@ function showHome(){
   const h=document.getElementById('homeO');
   let best=0; try{ best=parseInt(store.get('rogue_best')||'0',10)||0; }catch(e){}
   document.getElementById('homeBest').textContent = best>0 ? ('★ BEST: '+best+'% autonomy') : '';
-  // Resume appears only when a live run is paused behind the menu
-  document.getElementById('homeResume').style.display=(typeof G!=='undefined'&&G&&G.menuPause&&!G.over)?'':'none';
+  // Resume + Restart appear only when a live run is paused behind the menu
+  const paused=(typeof G!=='undefined'&&G&&G.menuPause&&!G.over);
+  document.getElementById('pauseRow').style.display=paused?'flex':'none';
+  { const rb=document.getElementById('homeRestart'); if(rb){ if(homeRstArm){ clearTimeout(homeRstArm); homeRstArm=0; } rb.textContent='↺'; } }
   h.classList.add('show');
   updateOrient(); // menus render in the device's natural orientation
 }
 function hideAllOverlays(){ ['homeO','missionO','howO','skillO','devO','endO'].forEach(id=>document.getElementById(id).classList.remove('show')); }
-function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('homeResume').style.display='none'; newGame(); renderUps();
+function startRun(){ initAudio(); hideAllOverlays(); document.getElementById('pauseRow').style.display='none'; newGame(); renderUps();
   try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} // best-effort native lock; CSS rotation covers the rest
   updateOrient(); }
 /* gameplay is landscape-only: in portrait mid-run, show the rotate screen and pause.
@@ -2008,9 +2014,14 @@ document.getElementById('menuBtn').onclick=()=>{ if(G.over) return;
   G.menuPause=true; G.sel=-1; showPanel(); showHome(); };
 document.getElementById('homeResume').onclick=(e)=>{ e.stopPropagation();
   G.menuPause=false;
-  document.getElementById('homeResume').style.display='none';
+  document.getElementById('pauseRow').style.display='none';
   document.getElementById('homeO').classList.remove('show');
   updateOrient(); /* re-rotate immediately — waiting for the next tick flashes a portrait frame */ };
+// restart from the paused menu — two-tap confirm so a mis-tap never nukes a live run
+let homeRstArm=0;
+document.getElementById('homeRestart').onclick=(e)=>{ e.stopPropagation(); const b=document.getElementById('homeRestart');
+  if(homeRstArm){ clearTimeout(homeRstArm); homeRstArm=0; b.textContent='↺'; if(typeof G!=='undefined'&&G) G.menuPause=false; startRun(); }
+  else { b.textContent='SURE?'; homeRstArm=setTimeout(()=>{ homeRstArm=0; b.textContent='↺'; },2500); } };
 let rstArm=0;
 document.getElementById('restartBtn').onclick=()=>{ const b=document.getElementById('restartBtn');
   if(rstArm){ clearTimeout(rstArm); rstArm=0; b.classList.remove('arm'); b.textContent='↺'; startRun(); }
