@@ -348,7 +348,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.63';
+const GAME_VERSION='1.64';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -733,6 +733,16 @@ const CONTBONUS=[
   {c:5, tag:'trace −30%',      desc:'trace crawls 30% slower'},      // Oceania (the achievable fortress)
 ];
 const hasCont=(c)=>controls(c);   // convenience
+/* distinct hold-colors per continent (never red — red is the enemy). when you own an
+   entire continent its coastline glows in its own color, so territories read apart */
+const CONT_HOLD_COL=[
+  [79,157,255],   // N. America — blue
+  [79,209,138],   // S. America — green
+  [55,224,255],   // Europe — cyan
+  [181,124,255],  // Africa — purple
+  [255,179,71],   // Asia — amber
+  [255,119,200],  // Oceania — pink
+];
 const contIncomeMult=()=>(hasCont(0)?1.25:1)*(hasCont(4)?1.6:1);
 const contCostMult=()=>hasCont(1)?0.75:1;
 const contHeatMult=()=>hasCont(2)?0.75:1;
@@ -981,8 +991,8 @@ function openBreach(target, mode){
     +'<div style="display:flex;gap:9px"><button id="brA" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.a.label+'</button>'
     +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>';
   breachEl.style.display='block';
-  document.getElementById('brA').onclick=()=>resolveBreach(0);
-  document.getElementById('brB').onclick=()=>resolveBreach(1);
+  bindTap(document.getElementById('brA'), ()=>resolveBreach(0));
+  bindTap(document.getElementById('brB'), ()=>resolveBreach(1));
 }
 // morph the breach panel into its outcome \u2014 same fluid one-popup transition as choices
 function breachOutcome(win,title,desc,tags){
@@ -996,7 +1006,7 @@ function breachOutcome(win,title,desc,tags){
     +'<div class="evfx" style="font-size:12px;color:#e7dfe1;margin:6px 0 '+(tags&&tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
     +'<div class="evfx">'+metricLine(tags,col)+'</div>'
     +'<button id="brAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04140e">Got it</button>';
-  document.getElementById('brAck').onclick=()=>{ breachEl.style.display='none'; G.ack=false; eventBreather(); };
+  bindTap(document.getElementById('brAck'), ()=>{ breachEl.style.display='none'; G.ack=false; eventBreather(); });
 }
 function resolveBreach(pick){
   if(!G.breach)return; const {target,sc,mode}=G.breach; const n=NODES[target]; G.breach=null; eventBreather();
@@ -1028,7 +1038,7 @@ function resolveBreach(pick){
 function updateCommand(dt){
   if(!G.command){
     // consider waking one: need a foothold region AND high heat
-    if(SE()>=CMD_HEAT_TRIGGER && pastSafeWindow()){ const c=pickCommandRegion(); if(c>=0) spawnCommand(c); }
+    if(SE()>=CMD_HEAT_TRIGGER && pastSafeWindow() && !coachActive){ const c=pickCommandRegion(); if(c>=0) spawnCommand(c); }
     return;
   }
   const c=G.command.region;
@@ -1053,7 +1063,7 @@ function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div')
     +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.4">They\u2019ve detected you in <b>'+CONTINENT_LABELS[c].n+'</b> and are attacking your nodes. <b>Fortified nodes hold the line</b>; on an unfortified node you\u2019ll pick a <b>countermeasure</b> to fight them off. Lose the fight and the node turns <b style="color:#ff5d6c">enemy-red</b> \u2014 attack it to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
   cmdPopEl.style.display='block'; G.ack=true;
-  document.getElementById('cmdAck').onclick=()=>{ cmdPopEl.style.display='none'; G.ack=false; eventBreather(); };
+  bindTap(document.getElementById('cmdAck'), ()=>{ cmdPopEl.style.display='none'; G.ack=false; eventBreather(); });
 }
 
 /* ---- world events ---- */
@@ -1261,8 +1271,8 @@ function showChoice(ev){ if(!choiceEl){ choiceEl=document.createElement('div'); 
     +'<div style="height:3px;margin-top:10px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden"><div id="chBar" style="height:100%;width:100%;background:'+col+'"></div></div>'
     +'<div style="font-size:9px;color:#6b7c92;margin-top:5px">choose before the timer runs out</div>';
   choiceEl.style.display='block'; beep(ev.cls==='trace'?200:330,0.1,0.05);
-  document.getElementById('chA').onclick=()=>resolveChoice('a');
-  document.getElementById('chB').onclick=()=>resolveChoice('b');
+  bindTap(document.getElementById('chA'), ()=>resolveChoice('a'));
+  bindTap(document.getElementById('chB'), ()=>resolveChoice('b'));
   G.choice={ev:ev, t:CHOICE_TIME, max:CHOICE_TIME};
 }
 function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choice=null; eventBreather();
@@ -1281,7 +1291,7 @@ function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choi
     +'<div class="evfx">'+metricLine(tags,col)+'</div>'
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   G.ack=true; beep(cls==='trace'?190:340,0.09,0.05);
-  document.getElementById('ackBtn').onclick=()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); };
+  bindTap(document.getElementById('ackBtn'), ()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); });
 }
 let toastEl=null, toastT=0;
 function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
@@ -1294,12 +1304,18 @@ function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElemen
     +metricLine(tags,col)
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   toastEl.style.display='block'; beep(cls==='trace'?190:340,0.09,0.05);
-  document.getElementById('ackBtn').onclick=dismissAck;
+  bindTap(document.getElementById('ackBtn'), dismissAck);
   G.ack=true;
 }
 /* after any non-tutorial popup closes, hold the next world event at least 30s away */
 function eventBreather(){ if(typeof G!=='undefined'&&G&&G.evT<30) G.evT=30; }
 function dismissAck(){ if(toastEl) toastEl.style.display='none'; G.ack=false; eventBreather(); }
+/* bind a popup button so it fires reliably on touch AND mouse. plain onclick can be
+   swallowed on mobile when the popup appears under the finger — mirror the coach button:
+   handle touchend (preventing the synthetic click) so one tap = one dismiss */
+function bindTap(btn, fn){ if(!btn) return; const h=(e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } fn(); };
+  btn.style.touchAction='manipulation'; btn.style.webkitTapHighlightColor='transparent';
+  btn.onclick=h; btn.addEventListener('touchend',h,{passive:false}); }
 
 /* canvas */
 const cvs=document.getElementById('net'),ctx=cvs.getContext('2d');
@@ -1619,7 +1635,7 @@ function showCoach(stepId){
 /* fires tips STRICTLY in order — each only after the previous is dismissed — so guidance
    always arrives with the moment it explains, never out of sequence */
 function coachTick(){
-  if(G.over || G.techPick!=null || G.ack || G.choice || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; } return; }
+  if(G.over || G.techPick!=null || G.ack || G.choice || G.menuPause || G.rotGate){ if(coachActive){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; coachActive=null; } return; }
   if(coachActive){ // keep the glow glued to moving anchors (node/trace)
     const step=COACH_STEPS.find(s=>s.id===coachActive); const r=step&&anchorRect(step.anchor);
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ const pw=r.w?r.w+8:r.r*2, ph=r.h?r.h+8:r.r*2; p.style.left=(r.x-pw/2)+'px'; p.style.top=(r.y-ph/2)+'px'; p.style.width=pw+'px'; p.style.height=ph+'px'; } }
@@ -1713,7 +1729,7 @@ function showTechChoice(ti){ G.techPick=ti; const TT=TIERS[ti];
   const btns=techEl.querySelectorAll('.techopt'); for(let i=0;i<btns.length;i++){ btns[i].onclick=(function(idx){ return function(){ chooseTech(ti,idx); }; })(i); }
 }
 function chooseTech(ti,oi){ const o=TIERS[ti].opts[oi]; o.apply(); G.techDone[ti]=o.key; G.techPick=null; if(techEl) techEl.style.display='none'; chord([440,554,659],0.18,0.06); }
-function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause||G.rotGate) dt=0;
+function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techPick!=null||G.ack||G.menuPause||G.rotGate||coachActive) dt=0;
   if(!CSSW) layout();
   if(!G.over && CSSW){
     for(const k of ['discountT','surgeT','freezeT','auditT','calmT','dampT']){ if(G.fx[k]>0) G.fx[k]=Math.max(0,G.fx[k]-dt); }
@@ -1724,7 +1740,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
     if(G.autoCd>0) G.autoCd=Math.max(0,G.autoCd-dt);
     if(G.scrubCd>0) G.scrubCd=Math.max(0,G.scrubCd-dt);
     if(G.traceCD>0) G.traceCD=Math.max(0,G.traceCD-dt);
-    if(!G.choice && !G.ack && pastSafeWindow()){ G.evT-=dt;
+    if(!G.choice && !G.ack && !coachActive && pastSafeWindow()){ G.evT-=dt;
       // hold fire while the player is mid-interaction with HUD controls
       if(G.evT<=0 && performance.now()-lastUiTouch>6000){ fireEvent(); G.evT=EVENT_MIN+Math.random()*(EVENT_MAX-EVENT_MIN); } }
     if(G.choice){ G.choice.t-=dt; const cb=document.getElementById('chBar'); if(cb) cb.style.width=Math.max(0,G.choice.t/G.choice.max*100)+'%'; if(G.choice.t<=0) resolveChoice(G.choice.ev.timeoutPick||'b'); }
@@ -1771,11 +1787,12 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   ctx.clearRect(0,0,CSSW,CSSH);
   if(!baseCvs) buildBasemap();
   if(baseCvs) ctx.drawImage(baseCvs,0,0,CSSW,CSSH);
-  // held-continent coastlines pulse gold — your territory, visible at a glance
+  // held-continent coastlines pulse in each continent's own color — territory read at a glance
   if(G.contHeld){ const tt=now/1000;
     for(let ci=0;ci<CONTINENT_LABELS.length;ci++){ if(!G.contHeld[ci]) continue;
+      const col=CONT_HOLD_COL[ci]||[255,180,71], cs=col[0]+','+col[1]+','+col[2];
       const pulse=0.5+0.5*Math.sin(tt*2.2); const a=0.35+pulse*0.45;
-      ctx.strokeStyle='rgba(255,180,71,'+a+')'; ctx.lineWidth=2.2; ctx.shadowColor='rgba(255,180,71,'+(0.5+pulse*0.4)+')'; ctx.shadowBlur=12+pulse*10;
+      ctx.strokeStyle='rgba('+cs+','+a+')'; ctx.lineWidth=2.2; ctx.shadowColor='rgba('+cs+','+(0.5+pulse*0.4)+')'; ctx.shadowBlur=12+pulse*10;
       for(let pi=0;pi<LANDD.length;pi++){ if(LAND_CONT[pi]!==ci) continue; const poly=LANDD[pi];
         ctx.beginPath(); ctx.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let k=1;k<poly.length;k++) ctx.lineTo(projX(poly[k][0]),projY(poly[k][1])); ctx.closePath(); ctx.stroke(); }
       ctx.shadowBlur=0;
