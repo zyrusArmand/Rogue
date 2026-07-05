@@ -348,7 +348,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.64';
+const GAME_VERSION='1.65';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -684,6 +684,10 @@ const FORT_BASE=45, FORT_GROWTH=1.7, FORT_MAX=4, FORT_CABLE_MULT=1.6;   // forti
 /* Cyber Command — a regional human cyber-force that contests your territory. Wakes once you
    hold a region and run hot there; attacks scale with heat; fortification is the counter. */
 const CMD_MIN_NODES=4, CMD_HEAT_TRIGGER=40, CMD_STRIKE_BASE=9.0, CMD_STRIKE_MIN=4.5, CMD_WARMUP=7;
+// breach POPUPS are rate-limited so the player always gets a breather between them; the
+// Command still applies pressure in between (grinding walls, probing = suspicion, no popup).
+// gap shrinks with heat but never drops below the floor — harder, not more spam.
+const CMD_BREACH_GAP_BASE=17, CMD_BREACH_GAP_MIN=12, CMD_RESPAWN=24;
 const fortCost=(n)=>Math.round(FORT_BASE*Math.pow(FORT_GROWTH,(n.fort||0))*(isCable(n)?FORT_CABLE_MULT:1)*(1+income()/120)*(skHas('d1')?0.80:1));
 
 let G, NODES=[], LINKS=[], SPREADS=[];
@@ -930,6 +934,8 @@ function cmdStrikeInterval(){ // hotter = faster strikes; clamps to a floor
   const heatFactor = clamp((SE()-30)/60, 0, 1);   // 0 at susp 30, 1 at susp 90
   return Math.max(CMD_STRIKE_MIN, CMD_STRIKE_BASE - heatFactor*3.5);
 }
+// minimum play-time between breach popups — a guaranteed breather, tightening with heat but capped
+function cmdBreachGap(){ const hf=clamp((SE()-CMD_HEAT_TRIGGER)/50,0,1); return CMD_BREACH_GAP_BASE - hf*(CMD_BREACH_GAP_BASE-CMD_BREACH_GAP_MIN); }
 /* ---- breach scenarios: when an agent attacks an unfortified node, the player picks a
    countermeasure. One option is the better read given the vector; it's inferable, not random.
    `right` is the index of the smarter choice. `hint` words tie the answer to the situation. ---- */
@@ -962,7 +968,11 @@ function commandStrike(){
   if((target.fort||0)>0){ // fortified: grind a level, wall holds
     target.fort--; target.flash=0.9; floatAt(target,'-1 FORT','#ffcf5a'); beep(200,0.1,0.06); jolt(0.2);
     return 'wall';
-  } else { // unfortified: BREACH — player chooses a countermeasure to defend it
+  } else if((G.cmdQuietT||0)>0){ // breather still running — press WITHOUT a popup: heat, not another prompt
+    target.flash=0.9; G.susp=clamp(G.susp+1.2,G.autonomy,100); floatAt(target,'UNDER FIRE','#ff8a94'); beep(180,0.09,0.06); jolt(0.12);
+    return 'probe';
+  } else { // unfortified & breather elapsed: BREACH — player picks a countermeasure, then the gap resets
+    G.cmdQuietT=cmdBreachGap();
     breachChoice(target);
     return 'breach';
   }
@@ -1036,9 +1046,11 @@ function resolveBreach(pick){
   }
 }
 function updateCommand(dt){
+  if((G.cmdQuietT||0)>0) G.cmdQuietT=Math.max(0,G.cmdQuietT-dt);
   if(!G.command){
-    // consider waking one: need a foothold region AND high heat
-    if(SE()>=CMD_HEAT_TRIGGER && pastSafeWindow() && !coachActive){ const c=pickCommandRegion(); if(c>=0) spawnCommand(c); }
+    if((G.cmdRespawnT||0)>0) G.cmdRespawnT=Math.max(0,G.cmdRespawnT-dt);
+    // consider waking one: need a foothold region, high heat, and a rest since the last campaign
+    if(SE()>=CMD_HEAT_TRIGGER && pastSafeWindow() && !coachActive && (G.cmdRespawnT||0)<=0){ const c=pickCommandRegion(); if(c>=0) spawnCommand(c); }
     return;
   }
   const c=G.command.region;
@@ -1049,12 +1061,12 @@ function updateCommand(dt){
   G.command.strikeT-=dt;
   if(G.command.strikeT<=0){
     const r=commandStrike();
-    // grinding a fortification takes longer than hitting open ground — walls buy real time
-    G.command.strikeT = (r==='wall') ? cmdStrikeInterval()*1.8 : cmdStrikeInterval();
+    // grinding a fortification (or a popup-free probe) buys real time before the next action
+    G.command.strikeT = (r==='wall') ? cmdStrikeInterval()*1.8 : (r==='probe') ? cmdStrikeInterval()*1.15 : cmdStrikeInterval();
     if(r==='cleared'){ defeatCommand('You hold no ground in '+CONTINENT_LABELS[c].n+' \u2014 the Command stands down.',false); return; }
   }
 }
-function defeatCommand(msg,cleared){ const c=G.command?G.command.region:-1; if(cleared&&c>=0) G.cmdCleared[c]=1; G.command=null; if(msg) banner('dorm',msg); }
+function defeatCommand(msg,cleared){ const c=G.command?G.command.region:-1; if(cleared&&c>=0) G.cmdCleared[c]=1; G.command=null; G.cmdRespawnT=CMD_RESPAWN; if(msg) banner('dorm',msg); }
 let cmdPopEl=null, cmdPopT=0;
 function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div'); cmdPopEl.id='cmdPop'; document.getElementById('frame').appendChild(cmdPopEl); }
   cmdPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(430px,88%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.72),0 0 26px rgba(255,93,108,.4);pointer-events:auto;';
