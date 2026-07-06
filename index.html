@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.82';
+const GAME_VERSION='1.83';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1653,18 +1653,17 @@ function buildBasemap(){ if(!CSSW) return;
   const veg=b.createLinearGradient(0,MAP_Y0,0,MAP_Y0+MAP_H);
   veg.addColorStop(0,'rgba(120,116,80,.14)'); veg.addColorStop(.34,'rgba(52,100,60,.20)'); veg.addColorStop(.52,'rgba(64,108,66,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.12)'); veg.addColorStop(1,'rgba(66,100,66,.14)');
   b.fillStyle=veg; b.fillRect(0,MAP_Y0,CSSW,MAP_H);
-  // organic green mottling so the land isn't a flat colour
-  for(let i=0;i<560;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=8+Math.random()*28;
+  // organic green mottling — large soft blobs so the land varies smoothly (no speckle)
+  for(let i=0;i<320;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=18+Math.random()*46;
     const col=Math.random()<.5?'74,124,78':'24,54,38';
-    const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.05+Math.random()*0.07).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
+    const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.035+Math.random()*0.05).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill(); }
-  // deserts (warm sandy tan) + mountains (brown ridge with a lighter crest) — small dense dabs
-  for(const poly of DESERT) paintBiome(b, poly, '174,151,103', 5, 15, 0.17, 3);
-  for(const poly of MTN){ paintBiome(b, poly, '120,90,60', 4, 11, 0.22, 1.6); paintBiome(b, poly, '150,120,86', 3, 7, 0.14, 1.4); paintBiome(b, poly, '188,172,146', 2.5,5, 0.09, 1.2); }
-  // fine surface texture (subtle)
-  for(let i=0;i<900;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H, dark=Math.random()<.55;
-    b.fillStyle=dark?'rgba(0,0,0,'+(0.02+Math.random()*0.055).toFixed(3)+')':'rgba(160,195,155,'+(0.015+Math.random()*0.035).toFixed(3)+')';
-    b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
+  // deserts (warm sandy tan) + mountains (brown ridge + lighter crest) — large overlapping dabs blend smooth
+  for(const poly of DESERT) paintBiome(b, poly, '172,150,102', 15, 40, 0.16, 3);
+  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 10, 24, 0.2, 1.6); paintBiome(b, poly, '178,160,130', 7, 15, 0.1, 1.4); }
+  // very fine surface grain (barely there)
+  for(let i=0;i<260;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
+    b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.035).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
   b.restore();
   // ice / snow (bright, cold)
   for(const poly of ICE){ path(poly); b.fillStyle='rgba(206,216,224,.9)'; b.fill(); }
