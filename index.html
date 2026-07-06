@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.79';
+const GAME_VERSION='1.80';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1603,26 +1603,34 @@ function buildBasemap(){ if(!CSSW) return;
   if(baseCvs.width!==W) baseCvs.width=W; if(baseCvs.height!==H) baseCvs.height=H;
   const b=baseCvs.getContext('2d'); baseCtx=b; b.setTransform(DPR,0,0,DPR,0,0); b.clearRect(0,0,CSSW,CSSH);
   const path=(poly)=>{ b.beginPath(); b.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let i=1;i<poly.length;i++) b.lineTo(projX(poly[i][0]),projY(poly[i][1])); b.closePath(); };
-  // deep ocean gradient
-  const og=b.createLinearGradient(0,0,0,CSSH); og.addColorStop(0,'#082a38'); og.addColorStop(.55,'#061f2b'); og.addColorStop(1,'#05161f');
+  // deep ocean — layered blue with a lighter continental-shelf tone toward the top
+  const og=b.createLinearGradient(0,0,0,CSSH); og.addColorStop(0,'#0b2c44'); og.addColorStop(.55,'#08202f'); og.addColorStop(1,'#05141d');
   b.fillStyle=og; b.fillRect(0,0,CSSW,CSSH);
   // tactical grid
   b.strokeStyle='rgba(30,110,130,.13)';b.lineWidth=1;
   for(let x=(CSSW%42)/2;x<CSSW;x+=42){b.beginPath();b.moveTo(x,0);b.lineTo(x,CSSH);b.stroke();}
   for(let y=(CSSH%42)/2;y<CSSH;y+=42){b.beginPath();b.moveTo(0,y);b.lineTo(CSSW,y);b.stroke();}
-  // land base (micro-islands filtered out for a cleaner read)
-  for(const poly of LANDD){ path(poly); b.fillStyle='#264c37'; b.fill(); }
-  // deserts + mountains + noise, clipped to land
+  // land base — natural muted green
+  for(const poly of LANDD){ path(poly); b.fillStyle='#2b4c37'; b.fill(); }
+  // terrain, clipped to land, blended soft like a physical relief map
   b.save(); b.beginPath(); for(const poly of LANDD){ b.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let i=1;i<poly.length;i++) b.lineTo(projX(poly[i][0]),projY(poly[i][1])); b.closePath(); } b.clip();
-  for(const poly of DESERT){ path(poly); b.fillStyle='rgba(112,98,64,.85)'; b.fill(); }
-  for(const poly of MTN){ path(poly); b.fillStyle='rgba(92,74,56,.9)'; b.fill(); }
-
-  for(let i=0;i<1500;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H, dark=Math.random()<.55;
-    b.fillStyle=dark?'rgba(0,0,0,'+(0.03+Math.random()*0.08)+')':'rgba(150,190,150,'+(0.02+Math.random()*0.05)+')';
+  // vegetation bands: richer green through the tropics, drier/olive toward the mid-latitudes
+  const veg=b.createLinearGradient(0,MAP_Y0,0,MAP_Y0+MAP_H);
+  veg.addColorStop(0,'rgba(120,116,80,.16)'); veg.addColorStop(.34,'rgba(58,104,64,.20)'); veg.addColorStop(.52,'rgba(70,110,70,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.14)'); veg.addColorStop(1,'rgba(70,100,68,.16)');
+  b.fillStyle=veg; b.fillRect(0,MAP_Y0,CSSW,MAP_H);
+  // deserts — warm sandy tan, feathered edges (shadow blur = soft transition, no hard polygon lines)
+  for(const poly of DESERT){ path(poly); b.fillStyle='rgba(163,142,95,.55)'; b.shadowColor='rgba(163,142,95,.55)'; b.shadowBlur=18; b.fill(); b.fill(); }
+  b.shadowBlur=0;
+  // mountains — brown ridges with a lighter tan crest, feathered
+  for(const poly of MTN){ path(poly); b.fillStyle='rgba(120,95,68,.5)'; b.shadowColor='rgba(120,95,68,.5)'; b.shadowBlur=14; b.fill(); b.shadowBlur=0;
+    path(poly); b.fillStyle='rgba(176,158,128,.28)'; b.fill(); }
+  // fine surface texture (subtle)
+  for(let i=0;i<1000;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H, dark=Math.random()<.55;
+    b.fillStyle=dark?'rgba(0,0,0,'+(0.025+Math.random()*0.06)+')':'rgba(160,195,155,'+(0.015+Math.random()*0.04)+')';
     b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
   b.restore();
-  // ice land (dim)
-  for(const poly of ICE){ path(poly); b.fillStyle='rgba(150,166,176,.82)'; b.fill(); }
+  // ice / snow (bright, cold)
+  for(const poly of ICE){ path(poly); b.fillStyle='rgba(206,216,224,.9)'; b.fill(); }
   // glowing coastline
   for(const poly of LANDD){ path(poly); b.strokeStyle='rgba(46,200,230,.55)'; b.lineWidth=1.2; b.shadowColor='rgba(46,200,230,.4)'; b.shadowBlur=5; b.stroke(); b.shadowBlur=0; }
   // Europe|Asia land border — solid, same blue glowing line as the coastlines (not dashed)
