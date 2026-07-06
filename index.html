@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.72';
+const GAME_VERSION='1.73';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -665,6 +665,13 @@ function strokeContCoast(ci){ ctx.beginPath();
     for(let k=0;k<poly.length;k++){ const n2=(k+1)%poly.length;
       if(tags[k]===ci && tags[n2]===ci){ ctx.moveTo(projX(poly[k][0]),projY(poly[k][1])); ctx.lineTo(projX(poly[n2][0]),projY(poly[n2][1])); } } }
   ctx.stroke(); }
+/* the conventional Europe|Asia land border: Urals → Ural River → Caspian → Caucasus →
+   Black Sea → Bosphorus. Europe is west of it, Asia east; it divides the shared landmass. */
+const EURASIA_BORDER=[[66,69],[65,66],[61,64],[59,60],[59,55],[58,51],[55,50],[51,47],[49,46],[48,44],[45,43],[41,43],[38,43],[35,42],[31,42],[29,41],[27,40],[26,39]];
+function strokeEurasiaBorder(){ ctx.beginPath(); ctx.moveTo(projX(EURASIA_BORDER[0][0]),projY(EURASIA_BORDER[0][1]));
+  for(let i=1;i<EURASIA_BORDER.length;i++) ctx.lineTo(projX(EURASIA_BORDER[i][0]),projY(EURASIA_BORDER[i][1])); ctx.stroke(); }
+/* held-continent edges: coast + (for Europe/Asia) the internal border so each lights fully */
+function strokeContEdges(ci){ strokeContCoast(ci); if(ci===2||ci===4){ const sd=ctx.getLineDash(); ctx.setLineDash([]); strokeEurasiaBorder(); ctx.setLineDash(sd); } }
 let START=0; const UNLOCK=3;
 
 /* boosts — temporary bursts: pay compute, effect for a few seconds, then cooldown.
@@ -1601,7 +1608,9 @@ function buildBasemap(){ if(!CSSW) return;
   for(const poly of ICE){ path(poly); b.fillStyle='rgba(150,166,176,.82)'; b.fill(); }
   // glowing coastline
   for(const poly of LANDD){ path(poly); b.strokeStyle='rgba(46,200,230,.55)'; b.lineWidth=1.2; b.shadowColor='rgba(46,200,230,.4)'; b.shadowBlur=5; b.stroke(); b.shadowBlur=0; }
-  // (country/state border lines removed — cleaner map)
+  // Europe|Asia land border — dim dashed line so the two continents read apart on one landmass
+  b.save(); b.setLineDash([5,4]); b.strokeStyle='rgba(130,160,185,.34)'; b.lineWidth=1.1;
+  b.beginPath(); b.moveTo(projX(EURASIA_BORDER[0][0]),projY(EURASIA_BORDER[0][1])); for(let i=1;i<EURASIA_BORDER.length;i++) b.lineTo(projX(EURASIA_BORDER[i][0]),projY(EURASIA_BORDER[i][1])); b.stroke(); b.restore();
   // region labels (dim, on land)
   b.fillStyle='rgba(212,230,240,.40)'; b.font='7.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'; b.textAlign='center';
   for(const c of LABELS) b.fillText(c[0], projX(c[1]), projY(c[2]));
@@ -1857,9 +1866,9 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       const pulse=0.5+0.5*Math.sin(tt*2.2);
       // bold glow pass, then a bright thin core line so the continent's colour reads clearly
       ctx.strokeStyle='rgba('+cs+','+(0.28+pulse*0.22)+')'; ctx.lineWidth=6.5; ctx.lineJoin='round'; ctx.shadowColor='rgba('+cs+',0.95)'; ctx.shadowBlur=16+pulse*12;
-      strokeContCoast(ci);
+      strokeContEdges(ci);
       ctx.strokeStyle='rgba('+cs+','+(0.85+pulse*0.15)+')'; ctx.lineWidth=2.2; ctx.shadowBlur=6;
-      strokeContCoast(ci);
+      strokeContEdges(ci);
       ctx.shadowBlur=0;
     }
   }
