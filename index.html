@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.80';
+const GAME_VERSION='1.81';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1596,6 +1596,22 @@ function shapePath(x,y,r,shape){ ctx.beginPath();
 function brackets(x,y,r,style,alpha){ ctx.strokeStyle=style; ctx.globalAlpha=alpha; ctx.lineWidth=1.5; const s=r+3,l=4;
   for(const cn of [[-1,-1],[1,-1],[1,1],[-1,1]]){ ctx.beginPath(); ctx.moveTo(x+cn[0]*s,y+cn[1]*s-cn[1]*l); ctx.lineTo(x+cn[0]*s,y+cn[1]*s); ctx.lineTo(x+cn[0]*s-cn[0]*l,y+cn[1]*s); ctx.stroke(); } ctx.globalAlpha=1; }
 let baseCvs=null, baseCtx=null;
+/* paint a biome organically: scatter many soft radial-gradient "dabs" inside a region polygon
+   so it builds up like a cloud with no straight edges — replaces the flat geometric fills */
+function paintBiome(b, poly, rgb, rmin, rmax, alpha){
+  let a=1e9,B=-1e9,c=1e9,d=-1e9; for(const q of poly){ if(q[0]<a)a=q[0]; if(q[0]>B)B=q[0]; if(q[1]<c)c=q[1]; if(q[1]>d)d=q[1]; }
+  const sw=Math.abs(projX(B)-projX(a)), sh=Math.abs(projY(c)-projY(d));
+  const n=Math.min(420, Math.max(10, Math.round(sw*sh/(rmin*rmin*Math.PI)*0.9)));
+  let done=0, tries=0;
+  while(done<n && tries<n*5){ tries++;
+    const lon=a+Math.random()*(B-a), lat=c+Math.random()*(d-c);
+    if(!ptInPoly(lon,lat,poly)) continue; done++;
+    const px=projX(lon), py=projY(lat), r=rmin+Math.random()*(rmax-rmin);
+    const g=b.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0,'rgba('+rgb+','+(alpha*(0.55+Math.random()*0.7)).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
+    b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill();
+  }
+}
 function buildBasemap(){ if(!CSSW) return;
   // reuse one canvas — reallocating GPU-backed canvases on every resize can crash iOS Safari
   const W=Math.round(CSSW*DPR), H=Math.round(CSSH*DPR);
@@ -1614,19 +1630,21 @@ function buildBasemap(){ if(!CSSW) return;
   for(const poly of LANDD){ path(poly); b.fillStyle='#2b4c37'; b.fill(); }
   // terrain, clipped to land, blended soft like a physical relief map
   b.save(); b.beginPath(); for(const poly of LANDD){ b.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let i=1;i<poly.length;i++) b.lineTo(projX(poly[i][0]),projY(poly[i][1])); b.closePath(); } b.clip();
-  // vegetation bands: richer green through the tropics, drier/olive toward the mid-latitudes
+  // latitude vegetation banding: richer green through the tropics, drier/olive at mid-latitudes
   const veg=b.createLinearGradient(0,MAP_Y0,0,MAP_Y0+MAP_H);
-  veg.addColorStop(0,'rgba(120,116,80,.16)'); veg.addColorStop(.34,'rgba(58,104,64,.20)'); veg.addColorStop(.52,'rgba(70,110,70,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.14)'); veg.addColorStop(1,'rgba(70,100,68,.16)');
+  veg.addColorStop(0,'rgba(120,116,80,.14)'); veg.addColorStop(.34,'rgba(52,100,60,.20)'); veg.addColorStop(.52,'rgba(64,108,66,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.12)'); veg.addColorStop(1,'rgba(66,100,66,.14)');
   b.fillStyle=veg; b.fillRect(0,MAP_Y0,CSSW,MAP_H);
-  // deserts — warm sandy tan, feathered edges (shadow blur = soft transition, no hard polygon lines)
-  for(const poly of DESERT){ path(poly); b.fillStyle='rgba(163,142,95,.55)'; b.shadowColor='rgba(163,142,95,.55)'; b.shadowBlur=18; b.fill(); b.fill(); }
-  b.shadowBlur=0;
-  // mountains — brown ridges with a lighter tan crest, feathered
-  for(const poly of MTN){ path(poly); b.fillStyle='rgba(120,95,68,.5)'; b.shadowColor='rgba(120,95,68,.5)'; b.shadowBlur=14; b.fill(); b.shadowBlur=0;
-    path(poly); b.fillStyle='rgba(176,158,128,.28)'; b.fill(); }
+  // organic green mottling so the land isn't a flat colour
+  for(let i=0;i<560;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=8+Math.random()*28;
+    const col=Math.random()<.5?'74,124,78':'24,54,38';
+    const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.05+Math.random()*0.07).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
+    b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill(); }
+  // deserts + mountains — painted as organic clouds of soft dabs (no geometric shapes)
+  for(const poly of DESERT) paintBiome(b, poly, '170,148,100', 16, 42, 0.22);
+  for(const poly of MTN){ paintBiome(b, poly, '118,94,68', 11, 26, 0.22); paintBiome(b, poly, '182,164,134', 7, 15, 0.11); }
   // fine surface texture (subtle)
-  for(let i=0;i<1000;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H, dark=Math.random()<.55;
-    b.fillStyle=dark?'rgba(0,0,0,'+(0.025+Math.random()*0.06)+')':'rgba(160,195,155,'+(0.015+Math.random()*0.04)+')';
+  for(let i=0;i<900;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H, dark=Math.random()<.55;
+    b.fillStyle=dark?'rgba(0,0,0,'+(0.02+Math.random()*0.055).toFixed(3)+')':'rgba(160,195,155,'+(0.015+Math.random()*0.035).toFixed(3)+')';
     b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
   b.restore();
   // ice / snow (bright, cold)
