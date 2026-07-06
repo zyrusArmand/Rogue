@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.84';
+const GAME_VERSION='1.85';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -616,7 +616,7 @@ const CBORD=[
  [[150.0,-24.9],[148.2,-28.0],[144.2,-30.2],[147.7,-31.7],[150.5,-35.1],[151.7,-31.7],[153.7,-29.1],[152.0,-28.0]],
 ];
 const DESERT=[
- [[-14,17],[6,27],[18,30],[30,28],[33,20],[26,13],[8,13],[-6,14]],   // Sahara
+ [[-16,21],[-11,26],[-2,29],[8,30],[18,29],[27,29],[33,27],[36,22],[34,17],[24,15],[13,14],[2,15],[-8,16],[-15,18]],   // Sahara — full N. Africa band
  [[35,30],[43,28],[52,25],[56,19],[47,14],[40,17],[35,24]],          // Arabia
  [[54,45],[70,48],[88,48],[100,44],[95,38],[80,38],[62,41]],         // Central Asia / Gobi / Taklamakan
  [[117,-19],[132,-20],[142,-24],[143,-30],[130,-31],[120,-27],[116,-23]], // Australian outback
@@ -1623,20 +1623,28 @@ let baseCvs=null, baseCtx=null;
 function paintBiome(b, poly, rgb, rmin, rmax, alpha, edge){
   let a=1e9,B=-1e9,c=1e9,d=-1e9; for(const q of poly){ if(q[0]<a)a=q[0]; if(q[0]>B)B=q[0]; if(q[1]<c)c=q[1]; if(q[1]>d)d=q[1]; }
   const sw=Math.abs(projX(B)-projX(a)), sh=Math.abs(projY(c)-projY(d));
-  const n=Math.min(760, Math.max(30, Math.round(sw*sh/(rmin*rmin*Math.PI)*3.2)));
+  const n=Math.min(760, Math.max(30, Math.round(sw*sh/(rmin*rmin*Math.PI)*3.0)));
+  // smooth interior-ness: sample two rings out to 2*edge so the value ramps down gradually toward the coast
+  const inside=(x,y)=>ptInPoly(x,y,poly)?1:0;
+  const interiorAt=(lon,lat)=>{
+    let s=0, w=0;
+    for(const [dx,dy] of [[edge,0],[-edge,0],[0,edge],[0,-edge]]){ s+=inside(lon+dx,lat+dy); w++; }
+    for(const [dx,dy] of [[2*edge,0],[-2*edge,0],[0,2*edge],[0,-2*edge],[1.4*edge,1.4*edge],[-1.4*edge,1.4*edge],[1.4*edge,-1.4*edge],[-1.4*edge,-1.4*edge]]){ s+=inside(lon+dx,lat+dy)*0.5; w+=0.5; }
+    return s/w;   // ~1 deep inside, tapering smoothly to 0 near the edge
+  };
   let done=0, tries=0;
   while(done<n && tries<n*6){ tries++;
     const lon=a+Math.random()*(B-a), lat=c+Math.random()*(d-c);
     if(!ptInPoly(lon,lat,poly)) continue;
-    // interior-ness: how many of 4 nearby points are also inside (1 = deep inside, low = near edge)
-    let inn=0; if(ptInPoly(lon+edge,lat,poly))inn++; if(ptInPoly(lon-edge,lat,poly))inn++; if(ptInPoly(lon,lat+edge,poly))inn++; if(ptInPoly(lon,lat-edge,poly))inn++;
-    const interior=inn/4;
-    if(Math.random() > 0.22+interior*0.78) continue;   // fewer dabs near the edges → natural fade
+    const interior=interiorAt(lon,lat);
+    // density tapers with the square of interior-ness → gentle thinning toward the edge, no hard rim
+    if(Math.random() > 0.14+interior*interior*0.86) continue;
     done++;
-    const px=projX(lon), py=projY(lat), r=rmin+Math.random()*(rmax-rmin);
-    const al=alpha*(0.4+interior*0.6)*(0.7+Math.random()*0.5);
+    // deeper dabs run larger + softer; edge dabs stay small so the wash feathers out instead of banding
+    const px=projX(lon), py=projY(lat), r=rmin+(rmax-rmin)*(0.3+0.7*interior)*(0.6+Math.random()*0.4);
+    const al=alpha*(0.28+interior*0.72)*(0.55+Math.random()*0.4);
     const g=b.createRadialGradient(px,py,0,px,py,r);
-    g.addColorStop(0,'rgba('+rgb+','+al.toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
+    g.addColorStop(0,'rgba('+rgb+','+al.toFixed(3)+')'); g.addColorStop(.55,'rgba('+rgb+','+(al*0.45).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill();
   }
 }
@@ -1671,7 +1679,7 @@ function buildBasemap(){ if(!CSSW) return;
   for(const poly of FOREST) paintBiome(b, poly, '34,72,44', 14, 36, 0.16, 3);
   // deserts (warm sandy tan) + mountains (brown ridge + lighter crest) — dense large overlapping dabs
   for(const poly of DESERT) paintBiome(b, poly, '172,150,102', 14, 38, 0.18, 3);
-  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 9, 22, 0.24, 1.6); paintBiome(b, poly, '178,160,130', 6, 13, 0.12, 1.4); }
+  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 10, 24, 0.19, 1.8); paintBiome(b, poly, '178,160,130', 6, 14, 0.10, 1.5); }
   // very fine surface grain (barely there)
   for(let i=0;i<220;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
     b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.03).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
