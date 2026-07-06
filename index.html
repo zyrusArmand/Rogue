@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.75';
+const GAME_VERSION='1.76';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -645,9 +645,9 @@ const NODEDEF=[
  // Africa (3) — spread top-to-bottom, coasts, central band filled (Congo, Chad)
  [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[5,6,'server',3],[12,5,'relay',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
  // Asia (4) — Middle East, India, central-Asia + Siberia bands filled, China, SE-Asia islands, Japan
- [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[73,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[100,9,'relay',4],[107,15,'relay',4],[110,-2,'server',4],[122,14,'relay',4],[139,37,'server',4],[135,53,'relay',4],[162,60,'relay',4],
+ [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[73,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[100,9,'relay',4],[107,15,'relay',4],[110,-2,'server',4],[122,14,'relay',4],[139,37,'server',4],[135,53,'relay',4],[162,60,'relay',4],[168,64,'relay',4],
  // Oceania (5) — Australia coasts, NZ, Pacific islands
- [135,-4,'relay',5],[122,-20,'relay',5],[133,-13,'relay',5],[146,-18,'relay',5],[151,-30,'fin',5],[145,-38,'server',5],[134,-25,'hub',5],[116,-31,'relay',5],[171,-42,'relay',5],[166,-19,'server',5],[156,-8,'relay',5],
+ [135,-4,'relay',5],[133,-13,'relay',5],[151,-30,'fin',5],[145,-38,'server',5],[134,-25,'hub',5],[116,-31,'relay',5],[169,-42,'relay',5],[166,-19,'server',5],
 ];
 const CADJ=[[0,1],[0,2],[0,4],[1,3],[2,3],[2,4],[3,4],[4,5]];
 // tag every drawn-landmass vertex to a continent by its nearest node — but only nodes on the
@@ -657,6 +657,10 @@ function ptInPoly(x,y,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.len
 function polyOfPt(x,y){ for(let pi=0;pi<LANDD.length;pi++){ if(ptInPoly(x,y,LANDD[pi])) return pi; }
   let bp=-1,bd=1e18; for(let pi=0;pi<LANDD.length;pi++) for(const q of LANDD[pi]){ const d=(x-q[0])**2+(y-q[1])**2; if(d<bd){bd=d;bp=pi;} } return bp; }
 const NODE_POLY=NODEDEF.map(d=>polyOfPt(d[0],d[1]));
+// downsampled coastline vertices + a land test — used to keep land nodes just inside their
+// coast so markers never straddle the border. Water/island nodes are left where they are.
+const COAST_LL=[]; for(const poly of LANDD){ for(let k=0;k<poly.length;k++){ const a=poly[k],b=poly[(k+1)%poly.length]; COAST_LL.push(a); COAST_LL.push([(a[0]+b[0])/2,(a[1]+b[1])/2]); } }
+const onLandLL=(lon,lat)=>{ for(const poly of LANDD){ if(ptInPoly(lon,lat,poly)) return true; } return false; };
 const LAND_PT_CONT=LANDD.map((poly,pi)=>poly.map(pt=>{ let bc=-1,bd=1e18;
   for(let ni=0;ni<NODEDEF.length;ni++){ if(NODE_POLY[ni]!==pi) continue; const d=NODEDEF[ni], dd=(pt[0]-d[0])**2+(pt[1]-d[1])**2; if(dd<bd){bd=dd;bc=d[3];} }
   if(bc<0){ for(const d of NODEDEF){ const dd=(pt[0]-d[0])**2+(pt[1]-d[1])**2; if(dd<bd){bd=dd;bc=d[3];} } }  // island with no node of its own → global nearest
@@ -728,7 +732,7 @@ const fortCost=(n)=>Math.round(FORT_BASE*Math.pow(FORT_GROWTH,(n.fort||0))*(isCa
 let G, NODES=[], LINKS=[], SPREADS=[];
 function newGame(){
   applyLoadout();
-  NODES=NODEDEF.map(([lon,lat,type,cont],i)=>({id:i,lon,lat,type,continent:cont,owned:false,defended:false,pulse:0,flash:0}));
+  NODES=NODEDEF.map(([lon,lat,type,cont],i)=>({id:i,lon,lat,type,continent:cont,owned:false,defended:false,pulse:0,flash:0,land:onLandLL(lon,lat)}));
   buildLinks();
   const relays=NODES.filter(n=>n.type==='relay').map(n=>n.id); START=relays[(Math.random()*relays.length)|0];
   NODES[START].owned=true;
@@ -1394,12 +1398,19 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
 function spaceRadius(n){ return n.type==='hub'?24:n.type==='fin'?19:n.type==='server'?15:13; }
 function relaxNodes(){
   const scale=Math.min(1,(CSSW||800)/900);   // ease spacing on very small screens so nodes stay on-map
+  const cpx=COAST_LL.map(p=>projX(p[0])), cpy=COAST_LL.map(p=>projY(p[1]));   // coast points for this layout
+  const nodeR=(n)=>n.type==='hub'?9:n.type==='fin'?7:6;   // marker radius
   for(let it=0; it<60; it++){ let moved=0;
     for(let i=0;i<NODES.length;i++) for(let j=i+1;j<NODES.length;j++){
       const a=NODES[i],b=NODES[j], min=(spaceRadius(a)+spaceRadius(b))*scale;
       let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.01;
       if(d<min){ const p=(min-d)/2/d; a.x-=dx*p; a.y-=dy*p; b.x+=dx*p; b.y+=dy*p; moved++; }
     }
+    // keep land nodes off the coastline — push inland if the marker overlaps the coast
+    for(const n of NODES){ if(!n.land) continue;
+      let m=1e18,mx=n.x,my=n.y; for(let k=0;k<cpx.length;k++){ const d=(n.x-cpx[k])**2+(n.y-cpy[k])**2; if(d<m){m=d;mx=cpx[k];my=cpy[k];} }
+      const dist=Math.sqrt(m), margin=(nodeR(n)+8)*scale;
+      if(dist<margin){ const dx=n.x-mx,dy=n.y-my,len=dist||1; const push=(margin-dist)*0.6; n.x+=dx/len*push; n.y+=dy/len*push; moved++; } }
     for(const n of NODES){ n.x=clamp(n.x,PADX+8,CSSW-PADX-8); n.y=clamp(n.y,MAP_Y0+10,MAP_Y0+MAP_H-8); }
     if(!moved) break;
   }
