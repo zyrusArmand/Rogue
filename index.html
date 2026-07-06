@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.83';
+const GAME_VERSION='1.84';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -639,6 +639,15 @@ const MTN=[
  [[36,6],[42,9],[41,13],[36,10]],                                          // Ethiopian highlands
  [[-8,31],[0,34],[9,36],[3,33],[-6,30]],                                   // Atlas
  [[146,-20],[151,-28],[153,-36],[149,-37],[146,-29]],                      // Great Dividing Range
+];
+// deep-green forest / vegetation belts (match the dark green of real relief maps)
+const FOREST=[
+ [[-73,-6],[-60,-1],[-50,-4],[-55,-13],[-69,-11],[-74,-2]],   // Amazon
+ [[10,5],[24,4],[29,-3],[20,-8],[11,-2]],                     // Congo basin
+ [[96,5],[106,2],[117,-2],[121,4],[103,9]],                   // Maritime SE Asia
+ [[-96,49],[-74,52],[-58,52],[-80,58],[-102,55]],             // Canadian boreal
+ [[58,57],[88,60],[118,60],[128,58],[98,54],[66,55]],         // Siberian taiga
+ [[-8,44],[10,48],[24,52],[14,45],[0,43]],                    // C./W. Europe woodland
 ];
 const CONTINENT_LABELS=[{n:'N. AMERICA',lon:-134,lat:28},{n:'S. AMERICA',lon:-33,lat:-26},{n:'EUROPE',lon:-19,lat:49},{n:'AFRICA',lon:-4,lat:-12},{n:'ASIA',lon:153,lat:26},{n:'OCEANIA',lon:158,lat:-13}];
 /* tag each landmass to the nearest continent anchor, so we can glow a continent's coastline when held */
@@ -1614,7 +1623,7 @@ let baseCvs=null, baseCtx=null;
 function paintBiome(b, poly, rgb, rmin, rmax, alpha, edge){
   let a=1e9,B=-1e9,c=1e9,d=-1e9; for(const q of poly){ if(q[0]<a)a=q[0]; if(q[0]>B)B=q[0]; if(q[1]<c)c=q[1]; if(q[1]>d)d=q[1]; }
   const sw=Math.abs(projX(B)-projX(a)), sh=Math.abs(projY(c)-projY(d));
-  const n=Math.min(520, Math.max(24, Math.round(sw*sh/(rmin*rmin*Math.PI)*2.2)));
+  const n=Math.min(760, Math.max(30, Math.round(sw*sh/(rmin*rmin*Math.PI)*3.2)));
   let done=0, tries=0;
   while(done<n && tries<n*6){ tries++;
     const lon=a+Math.random()*(B-a), lat=c+Math.random()*(d-c);
@@ -1653,17 +1662,19 @@ function buildBasemap(){ if(!CSSW) return;
   const veg=b.createLinearGradient(0,MAP_Y0,0,MAP_Y0+MAP_H);
   veg.addColorStop(0,'rgba(120,116,80,.14)'); veg.addColorStop(.34,'rgba(52,100,60,.20)'); veg.addColorStop(.52,'rgba(64,108,66,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.12)'); veg.addColorStop(1,'rgba(66,100,66,.14)');
   b.fillStyle=veg; b.fillRect(0,MAP_Y0,CSSW,MAP_H);
-  // organic green mottling — large soft blobs so the land varies smoothly (no speckle)
-  for(let i=0;i<320;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=18+Math.random()*46;
-    const col=Math.random()<.5?'74,124,78':'24,54,38';
-    const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.035+Math.random()*0.05).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
+  // organic green mottling — many small-to-mid soft blobs, heavy overlap (smooth, no isolated circles)
+  for(let i=0;i<820;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=12+Math.random()*30;
+    const col=Math.random()<.5?'74,124,78':'22,52,36';
+    const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.03+Math.random()*0.045).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill(); }
-  // deserts (warm sandy tan) + mountains (brown ridge + lighter crest) — large overlapping dabs blend smooth
-  for(const poly of DESERT) paintBiome(b, poly, '172,150,102', 15, 40, 0.16, 3);
-  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 10, 24, 0.2, 1.6); paintBiome(b, poly, '178,160,130', 7, 15, 0.1, 1.4); }
+  // forests — deepen the tropics/boreal to match relief-map greens
+  for(const poly of FOREST) paintBiome(b, poly, '34,72,44', 14, 36, 0.16, 3);
+  // deserts (warm sandy tan) + mountains (brown ridge + lighter crest) — dense large overlapping dabs
+  for(const poly of DESERT) paintBiome(b, poly, '172,150,102', 14, 38, 0.18, 3);
+  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 9, 22, 0.24, 1.6); paintBiome(b, poly, '178,160,130', 6, 13, 0.12, 1.4); }
   // very fine surface grain (barely there)
-  for(let i=0;i<260;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
-    b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.035).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
+  for(let i=0;i<220;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
+    b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.03).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
   b.restore();
   // ice / snow (bright, cold)
   for(const poly of ICE){ path(poly); b.fillStyle='rgba(206,216,224,.9)'; b.fill(); }
