@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.73';
+const GAME_VERSION='1.74';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -438,9 +438,11 @@ const LAND=[
 const ICE=[
  [[-24.66,77.88],[-25.53,78],[-27.13,78],[-27.85,77.82],[-28.43,78],[-28.43,77.82],[-29.3,77.88],[-30.03,77.7],[-30.17,78],[-31.19,78.17],[-30.03,78.34],[-30.03,78.46],[-31.77,78.58],[-32.78,78.86],[-34.96,79.03],[-38.88,79.03],[-40.47,78.92],[-40.62,78.8],[-41.2,78.86],[-41.49,78.69],[-42.21,78.8],[-43.81,78.8],[-44.97,78.69],[-44.97,78.46],[-45.99,78.58],[-45.41,78.46],[-45.7,78.4],[-45.26,78.23],[-45.41,78.17],[-47.87,78.4],[-47.44,78.17],[-47.58,78.05],[-48.89,78.29],[-49.18,77.94],[-49.61,78.29],[-53.39,78.05],[-53.82,77.94],[-53.68,77.7],[-53.97,77.58],[-55.13,77.58],[-57.3,77.03],[-57.01,76.91],[-55.71,76.84],[-56.29,76.46],[-57.88,76.4],[-60.36,75.95],[-60.07,75.76],[-59.05,75.56],[-58.75,75.36],[-58.9,75.29],[-59.34,75.43],[-59.92,75.36],[-58.9,75.09],[-58.32,74.75],[-57.45,74.61],[-54.4,74.75],[-51.94,74.34],[-51.94,74.13],[-50.92,73.77],[-50.92,73.49],[-50.05,72.9],[-50.48,72.76],[-50.05,72.61],[-50.48,72.15],[-50.34,72],[-49.18,71.93],[-49.18,71.7],[-49.9,71.46],[-49.9,70.99],[-49.18,70.76],[-48.31,70.84],[-48.16,71.16],[-47.58,70.99],[-47.73,70.52],[-48.02,70.36],[-48.31,70.52],[-49.32,69.87],[-49.32,69.54],[-49.03,69.38],[-49.18,68.87],[-48.45,68.53],[-48.02,67.58],[-45.99,65.96],[-44.54,65.87],[-44.25,65.59],[-43.23,65.4],[-42.8,65.59],[-42.21,66.51],[-42.51,66.87],[-41.34,67.58],[-41.49,67.84],[-41.2,68.19],[-41.49,68.27],[-40.62,68.7],[-39.17,68.7],[-38.01,69.04],[-36.27,70.11],[-35.54,70.03],[-33.22,70.36],[-30.61,71.16],[-32.78,71.46],[-32.2,71.85],[-31.33,71.39],[-30.32,71.39],[-30.17,71.7],[-30.9,72.31],[-30.46,72.46],[-30.46,72.76],[-30.9,72.9],[-29.74,73.05],[-29.59,73.34],[-29.88,73.41],[-28.87,73.56],[-28.72,73.77],[-29.45,73.91],[-28.87,74.13],[-28.43,73.91],[-27.71,73.99],[-28.14,74.27],[-28.72,74.06],[-29.16,74.68],[-30.46,74.89],[-29.74,75.09],[-28.87,75.09],[-28.58,74.68],[-28.29,74.61],[-28.43,74.96],[-28.14,75.29],[-29.16,75.43],[-28.58,75.62],[-29.88,75.76],[-29.88,76.08],[-28.87,76.34],[-28.87,76.72],[-28,76.72],[-27.56,76.97],[-26.84,77.09],[-26.84,77.28],[-24.66,77.64]],
 ];
-/* declutter: hide micro-islands (tiny bounding boxes) from the render pass */
+/* declutter: hide micro-islands (tiny bounding boxes) + the messy Arctic archipelagos
+   (any separate landmass whose centre is far north — Svalbard, Novaya Zemlya, the Canadian
+   Arctic islands, etc.). Mainland Arctic coasts stay (they're part of the big continent polys). */
 const polyBB=p=>{let a=1e9,b=-1e9,c=1e9,d=-1e9;for(const q of p){if(q[0]<a)a=q[0];if(q[0]>b)b=q[0];if(q[1]<c)c=q[1];if(q[1]>d)d=q[1];}return (b-a)*(d-c);};
-const LANDD=LAND.filter(p=>polyBB(p)>=18);
+const LANDD=LAND.filter(p=>{ if(polyBB(p)<22) return false; let s=0; for(const q of p) s+=q[1]; return s/p.length<=70; });
 const polyCentroid=p=>{ let x=0,y=0; for(const q of p){x+=q[0];y+=q[1];} return [x/p.length,y/p.length]; };
 /* exact-trace country borders (stroke only) */
 const CBORD=[
@@ -635,15 +637,15 @@ const OCEAN_LABELS=[["NORTH PACIFIC",-150,6],["SOUTH PACIFIC",-116,-34],["NORTH 
 /* nodes: [lon, lat, type, continentIndex] */
 const NODEDEF=[
  // N. America (0) — far north, coasts, interior + a Greenland node (Greenland is part of N. America)
- [-152,64,'relay',0],[-135,61,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-108,52,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-121,38,'server',0],[-110,41,'relay',0],[-93,41,'hub',0],[-96,31,'fin',0],[-76,39,'server',0],[-81,28,'fin',0],[-103,23,'relay',0],[-88,13,'relay',0],
+ [-152,64,'relay',0],[-135,61,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-108,52,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-104,49,'relay',0],[-121,38,'server',0],[-110,41,'relay',0],[-93,41,'hub',0],[-96,31,'fin',0],[-76,39,'server',0],[-81,28,'fin',0],[-113,29,'relay',0],[-103,23,'relay',0],[-88,13,'relay',0],
  // S. America (1) — both coasts, interior, far south
- [-74,6,'relay',1],[-64,8,'server',1],[-55,3,'relay',1],[-79,-3,'relay',1],[-77,-12,'relay',1],[-38,-8,'server',1],[-52,-11,'hub',1],[-47,-24,'fin',1],[-64,-17,'relay',1],[-58,-24,'relay',1],[-64,-35,'relay',1],[-70,-46,'relay',1],
+ [-74,6,'relay',1],[-64,8,'server',1],[-55,3,'relay',1],[-79,-3,'relay',1],[-77,-12,'relay',1],[-38,-8,'server',1],[-52,-11,'hub',1],[-47,-24,'fin',1],[-63,-6,'relay',1],[-64,-17,'relay',1],[-58,-24,'relay',1],[-64,-35,'relay',1],[-70,-46,'relay',1],
  // Europe (2) — spread Iberia→Moscow, north→south; less central crowding
- [-6,40,'relay',2],[-3,53,'server',2],[-19,65,'relay',2],[3,47,'relay',2],[15,64,'relay',2],[11,51,'hub',2],[14,42,'fin',2],[24,41,'relay',2],[22,54,'server',2],[34,50,'relay',2],[40,57,'relay',2],
+ [-6,40,'relay',2],[-3,53,'server',2],[-19,65,'relay',2],[3,47,'relay',2],[15,64,'relay',2],[11,51,'hub',2],[14,42,'fin',2],[24,41,'relay',2],[22,54,'server',2],[34,50,'relay',2],[40,57,'relay',2],[50,58,'relay',2],
  // Africa (3) — spread top-to-bottom, coasts, central band filled (Congo, Chad)
- [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[5,6,'server',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
+ [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[5,6,'server',3],[12,5,'relay',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
  // Asia (4) — Middle East, India, central-Asia + Siberia bands filled, China, SE-Asia islands, Japan
- [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[73,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[100,9,'relay',4],[107,15,'relay',4],[110,-2,'server',4],[122,14,'relay',4],[139,37,'server',4],[135,53,'relay',4],[165,62,'relay',4],[176,66,'relay',4],
+ [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[73,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[100,9,'relay',4],[107,15,'relay',4],[110,-2,'server',4],[122,14,'relay',4],[139,37,'server',4],[135,53,'relay',4],[165,62,'relay',4],[176,66,'relay',4],
  // Oceania (5) — Australia coasts, NZ, Pacific islands
  [135,-4,'relay',5],[122,-20,'relay',5],[133,-13,'relay',5],[146,-18,'relay',5],[151,-30,'fin',5],[145,-38,'server',5],[134,-25,'hub',5],[116,-31,'relay',5],[174,-41,'relay',5],[166,-19,'server',5],[156,-8,'relay',5],
 ];
@@ -777,7 +779,7 @@ const hasCont=(c)=>controls(c);   // convenience
 const CONT_HOLD_COL=[
   [79,157,255],   // N. America — blue
   [79,209,138],   // S. America — green
-  [55,224,255],   // Europe — cyan
+  [196,240,72],   // Europe — chartreuse (distinct from the cyan base coastline)
   [181,124,255],  // Africa — purple
   [255,179,71],   // Asia — amber
   [255,119,200],  // Oceania — pink
