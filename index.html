@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.85';
+const GAME_VERSION='1.86';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -640,14 +640,43 @@ const MTN=[
  [[-8,31],[0,34],[9,36],[3,33],[-6,30]],                                   // Atlas
  [[146,-20],[151,-28],[153,-36],[149,-37],[146,-29]],                      // Great Dividing Range
 ];
+// broad semi-arid / steppe / savanna zones (brown-dominant land — Sahara, outback, arid Asia, western N.Am, Andes)
+const ARID=[
+ // AFRICA — brown swallows almost all of it; only the Congo/Guinea belt stays green (gap below)
+ [[-17,16],[-4,15],[12,14],[26,15],[40,13],[49,10],[44,6],[30,7],[16,8],[2,9],[-12,11],[-17,13]], // Sahel
+ [[36,13],[45,12],[51,7],[48,0],[41,-6],[35,-11],[31,-7],[33,1],[35,7]],                           // Horn / E. Africa
+ [[10,-14],[22,-10],[31,-11],[37,-16],[36,-25],[28,-34],[18,-35],[11,-28],[8,-20]],                // Southern Africa
+ // AUSTRALIA — outback covers the interior; green only on the coastal fringe (gap)
+ [[114,-33],[116,-24],[123,-18],[133,-16],[142,-17],[148,-23],[149,-31],[145,-37],[136,-36],[126,-34],[118,-33]],
+ // ASIA — arid west + central; green through Siberia, SE Asia, India (gaps)
+ [[34,37],[44,40],[56,39],[64,33],[61,26],[52,27],[44,31],[36,32],[33,34]],                        // Iran / Anatolia / Levant
+ [[48,50],[62,52],[78,51],[82,46],[70,42],[56,44],[49,46]],                                        // Kazakh / Central steppe
+ [[75,39],[88,37],[100,36],[104,31],[95,28],[82,30],[74,34]],                                      // Tibet / W. China
+ [[90,50],[110,49],[118,45],[108,42],[95,44]],                                                     // Mongolia steppe
+ // N. AMERICA — dry western interior; green east + Canada (gaps)
+ [[-122,48],[-112,49],[-102,48],[-98,42],[-100,34],[-107,30],[-115,31],[-122,38],[-123,44]],       // Great Plains / Basin / SW
+ [[-107,28],[-99,24],[-100,18],[-106,21]],                                                         // Mexican plateau
+ // S. AMERICA — Andes spine + Patagonia + NE cerrado; Amazon + Pampas green (gaps)
+ [[-73,-51],[-69,-44],[-66,-32],[-68,-20],[-73,-12],[-78,-8],[-75,-18],[-71,-33],[-72,-45]],       // Andes
+ [[-72,-40],[-64,-42],[-65,-51],[-72,-52]],                                                        // Patagonia
+ [[-46,-4],[-36,-8],[-40,-16],[-50,-18],[-52,-9]],                                                 // NE Brazil / cerrado
+ // EUROPE — Mediterranean + steppe fringe; temperate belt green (gaps)
+ [[-8,38],[-1,42],[3,40],[-3,37]],                                                                 // Iberia interior
+ [[30,49],[45,50],[52,47],[44,45],[32,46]],                                                        // Ukraine / S. Russia steppe
+];
 // deep-green forest / vegetation belts (match the dark green of real relief maps)
 const FOREST=[
  [[-73,-6],[-60,-1],[-50,-4],[-55,-13],[-69,-11],[-74,-2]],   // Amazon
  [[10,5],[24,4],[29,-3],[20,-8],[11,-2]],                     // Congo basin
+ [[-10,4],[-2,5],[5,5],[9,7],[1,8],[-9,8]],                   // Guinea coast
  [[96,5],[106,2],[117,-2],[121,4],[103,9]],                   // Maritime SE Asia
+ [[73,8],[84,10],[88,20],[80,24],[74,18]],                    // India monsoon (Western Ghats / south)
+ [[105,22],[120,24],[122,32],[112,30],[104,27]],              // SE China
  [[-96,49],[-74,52],[-58,52],[-80,58],[-102,55]],             // Canadian boreal
+ [[-88,32],[-78,36],[-74,41],[-84,44],[-90,38]],              // Eastern US woodland
  [[58,57],[88,60],[118,60],[128,58],[98,54],[66,55]],         // Siberian taiga
  [[-8,44],[10,48],[24,52],[14,45],[0,43]],                    // C./W. Europe woodland
+ [[148,-17],[152,-25],[152,-33],[149,-38],[147,-30],[148,-22]], // Australian E/SE coast (thin)
 ];
 const CONTINENT_LABELS=[{n:'N. AMERICA',lon:-134,lat:28},{n:'S. AMERICA',lon:-33,lat:-26},{n:'EUROPE',lon:-19,lat:49},{n:'AFRICA',lon:-4,lat:-12},{n:'ASIA',lon:153,lat:26},{n:'OCEANIA',lon:158,lat:-13}];
 /* tag each landmass to the nearest continent anchor, so we can glow a continent's coastline when held */
@@ -1666,20 +1695,24 @@ function buildBasemap(){ if(!CSSW) return;
   for(const poly of LANDD){ path(poly); b.fillStyle='#2b4c37'; b.fill(); }
   // terrain, clipped to land, blended soft like a physical relief map
   b.save(); b.beginPath(); for(const poly of LANDD){ b.moveTo(projX(poly[0][0]),projY(poly[0][1])); for(let i=1;i<poly.length;i++) b.lineTo(projX(poly[i][0]),projY(poly[i][1])); b.closePath(); } b.clip();
-  // latitude vegetation banding: richer green through the tropics, drier/olive at mid-latitudes
+  // latitude vegetation banding: gentle olive/green wash so the base isn't a flat green
   const veg=b.createLinearGradient(0,MAP_Y0,0,MAP_Y0+MAP_H);
-  veg.addColorStop(0,'rgba(120,116,80,.14)'); veg.addColorStop(.34,'rgba(52,100,60,.20)'); veg.addColorStop(.52,'rgba(64,108,66,.22)'); veg.addColorStop(.72,'rgba(120,116,80,.12)'); veg.addColorStop(1,'rgba(66,100,66,.14)');
+  veg.addColorStop(0,'rgba(120,116,80,.10)'); veg.addColorStop(.34,'rgba(52,100,60,.14)'); veg.addColorStop(.52,'rgba(64,108,66,.15)'); veg.addColorStop(.72,'rgba(120,116,80,.09)'); veg.addColorStop(1,'rgba(66,100,66,.10)');
   b.fillStyle=veg; b.fillRect(0,MAP_Y0,CSSW,MAP_H);
   // organic green mottling — many small-to-mid soft blobs, heavy overlap (smooth, no isolated circles)
   for(let i=0;i<820;i++){ const px=PADX+Math.random()*(CSSW-2*PADX), py=MAP_Y0+Math.random()*MAP_H, r=12+Math.random()*30;
     const col=Math.random()<.5?'74,124,78':'22,52,36';
     const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.03+Math.random()*0.045).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill(); }
-  // forests — deepen the tropics/boreal to match relief-map greens
-  for(const poly of FOREST) paintBiome(b, poly, '34,72,44', 14, 36, 0.16, 3);
-  // deserts (warm sandy tan) + mountains (brown ridge + lighter crest) — dense large overlapping dabs
-  for(const poly of DESERT) paintBiome(b, poly, '172,150,102', 14, 38, 0.18, 3);
+  // BIOME LAYOUT — brown-dominant on arid continents, green reclaimed only in the wet belts.
+  // 1) broad semi-arid/steppe/savanna zones turn most of the land warm brown
+  for(const poly of ARID) paintBiome(b, poly, '158,140,100', 16, 42, 0.28, 3.5);
+  // 2) bright sand desert cores sit inside the arid zones
+  for(const poly of DESERT) paintBiome(b, poly, '180,160,114', 14, 40, 0.22, 3);
+  // 3) mountains — brown ridge + lighter crest
   for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 10, 24, 0.19, 1.8); paintBiome(b, poly, '178,160,130', 6, 14, 0.10, 1.5); }
+  // 4) forests / wet belts reclaim green on top (Congo, Amazon, Siberia, SE Asia, coasts) so the greens land where reality has them
+  for(const poly of FOREST) paintBiome(b, poly, '40,82,50', 15, 40, 0.30, 3.2);
   // very fine surface grain (barely there)
   for(let i=0;i<220;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
     b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.03).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
