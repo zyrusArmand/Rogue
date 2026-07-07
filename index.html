@@ -360,7 +360,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.90';
+const GAME_VERSION='1.91';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -373,13 +373,15 @@ frameEl.addEventListener('scroll',()=>{ frameEl.scrollLeft=0; frameEl.scrollTop=
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const fmt=(n)=>{ n=Math.round(n); return n>=1000?(n/1000).toFixed(n<10000?1:0)+'K':''+n; };
 const f1=(n)=>n.toFixed(1);
+// income readout: whole numbers stay whole ("+2/s"), only show a decimal when bonuses make it fractional
+const fInc=(n)=>Number.isInteger(n)?String(n):n.toFixed(1);
 
 /* node economy — paybacks kept sensible (~10-20s); hubs are premium & gated */
 const TYPES={
-  relay:{name:'Relay Node',   col:[108,197,255], cost:10,  inc:0.7, susp:1,  shape:'dot'},
-  server:{name:'Server',      col:[46,230,255],  cost:26,  inc:1.7, susp:1.6, shape:'hex'},
-  fin:  {name:'Financial Hub', col:[255,190,77], cost:65,  inc:3.8, susp:5,  shape:'diamond'},
-  hub:  {name:'Data Core',    col:[84,240,160],  cost:170, inc:11.5, susp:8,  main:true, shape:'core'},
+  relay:{name:'Relay Node',   col:[108,197,255], cost:10,  inc:1,  susp:1,  shape:'dot'},
+  server:{name:'Server',      col:[46,230,255],  cost:26,  inc:2,  susp:1.6, shape:'hex'},
+  fin:  {name:'Financial Hub', col:[255,190,77], cost:65,  inc:4,  susp:5,  shape:'diamond'},
+  hub:  {name:'Data Core',    col:[84,240,160],  cost:170, inc:12, susp:8,  main:true, shape:'core'},
 };
 /* world map — landmasses as [lon,lat] outlines (equirectangular), verified visually */
 /* exact-trace coastlines from reference map (Miller projection) */
@@ -888,7 +890,7 @@ function showPanel(){
   const p=document.getElementById('nodepanel'), b=document.getElementById('banner');
   if(G.sel<0 || G.over){ p.style.display='none'; b.style.display=''; return; }
   const n=NODES[G.sel], T=TYPES[n.type]; b.style.display='none'; p.style.display='flex';
-  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${f1(T.inc)}/s · susp +${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'')+(isCable(n)&&!n.owned?` · <b style="color:var(--pur)">cable chokepoint</b>`:'');
+  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${fInc(T.inc)}/s · susp +${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'')+(isCable(n)&&!n.owned?` · <b style="color:var(--pur)">cable chokepoint</b>`:'');
   let mid='';
   if(n.enemy){
     if(!enemyRetakable(n)) mid=`<span class="pinfo">enemy-held — reach it from an adjacent node to attack</span>`;
@@ -925,7 +927,7 @@ function doCompromise(n){
   G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; { const oc=NODES.filter(x=>x.owned).length; if(oc>G.peakNodes) G.peakNodes=oc; } G.inflation=Math.min(INFL_CAP,G.inflation*1.15); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
   if(src!==undefined) SPREADS.push({a:src,b:n.id,t:0});
   n.flash=1; n.cap=1;   // white pop + capture-ring burst
-  floatAt(n,'+'+f1(TYPES[n.type].inc)+'/s',rgb(TYPES[n.type].col));
+  floatAt(n,'+'+fInc(TYPES[n.type].inc)+'/s',rgb(TYPES[n.type].col));
   // satisfying two-note rise on capture (hubs get a fuller chord)
   if(TYPES[n.type].main){ chord([392,523,659,784],0.12,0.06); } else { beep(440,0.05,0.045); tone(660,0.09,0.05,0.04); }
   jolt(TYPES[n.type].main?0.3:0.1); buzz(TYPES[n.type].main?[15,25,20]:12);
@@ -1832,9 +1834,9 @@ let coachDone={}, coachActive=null, coachModal=false;
 function loadCoach(){ try{ return JSON.parse(store.get('rogue_coach')||'{}'); }catch(e){ return {}; } }
 function coachSeen(id){ coachDone[id]=1; try{ store.set('rogue_coach',JSON.stringify(coachDone)); }catch(e){} }
 let coachCoolUntil=0;   // breathing room between tips — back-to-back tutorials feel clunky
-function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; coachModal=false; const wasIntro=coachActive==='intro'; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+(wasIntro?3000:22000); }
+function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; coachModal=false; const wasIntro=coachActive==='intro'; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+(wasIntro?0:22000); }
 function anchorRect(a){
-  if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
+  if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)&&G.compute>=nodeCost(x))||NODES.find(canTake); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
   if(a==='fortTarget'){ const n=NODES.find(x=>x.owned&&x.id!==START); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   const el=document.querySelector(a); if(!el)return null; const fr=document.getElementById('frame').getBoundingClientRect(), b=el.getBoundingClientRect();
@@ -1886,8 +1888,8 @@ function coachTick(){
   if(!coachDone.trace && G.trace){ showCoach('trace'); return; }
   // everything else waits its turn — never two tips back to back
   if(performance.now()<coachCoolUntil) return;
-  // step 1: teach taking a node — first thing, always
-  if(!coachDone.take){ if(NODES.some(canTake)) showCoach('take'); return; }
+  // step 1: teach taking a node — only once there's one you can actually afford, so we never point at a locked price
+  if(!coachDone.take){ if(NODES.some(x=>canTake(x)&&G.compute>=nodeCost(x))) showCoach('take'); return; }
   // step 2: teach autonomy once you can actually afford it — the tip says "you can afford this"
   if(!coachDone.auto){ if(ownedCount()>=2 && G.compute>=autoCost()) showCoach('auto'); return; }
   // step 3: teach suspicion the moment it first climbs — so the lesson lands WITH the rise
@@ -2148,7 +2150,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   // smoothly roll the displayed compute toward its real value so the number never snaps
   dispCompute += (G.compute-dispCompute)*Math.min(1,dt*14); if(Math.abs(G.compute-dispCompute)<0.5) dispCompute=G.compute;
   document.getElementById('compute').innerHTML=fmt(dispCompute)+'<span class="u">compute</span>';
-  document.getElementById('cps').textContent='+'+f1(income()+shadowInc())+'/s · '+ownedCount()+' nodes'+(G.inflation>1.05?' · prices ×'+G.inflation.toFixed(1):'');
+  document.getElementById('cps').textContent='+'+fInc(income()+shadowInc())+'/s · '+ownedCount()+' nodes'+(G.inflation>1.05?' · prices ×'+G.inflation.toFixed(1):'');
   const se=SE();
   const sf=document.getElementById('suspFill'); sf.style.width=se+'%'; sf.style.background=se>=TRACE_TIER?'var(--red)':se>=INV_TIER?'var(--amber)':'var(--grn)';
   const tl=document.getElementById('tierLbl');
