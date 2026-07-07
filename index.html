@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.87';
+const GAME_VERSION='1.88';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -764,8 +764,10 @@ const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutt
 const SCRUB_BASE=500, SCRUB_CD=14;   // scrub: scaling cost, dumps 25-35% of nodes, big suspicion cut
 const INV_TIER=28, TRACE_TIER=42, TRACE_HOP=3.4;   // danger starts earlier — no safe grind
 const TRACE_NEAR_SPEEDUP=0.55;   // trace accelerates on the last few hops to your core (close-call tension)
-const EVENT_FIRST=55, EVENT_MIN=14, EVENT_MAX=40, CHOICE_TIME=11;   // first event ~100s in (45s safe window + 55s timer); wider gaps between popups
-const SAFE_WINDOW=45;   // guaranteed-quiet opening: no events, trace, or Command — shorter now, danger arrives sooner
+const EVENT_FIRST=60, EVENT_MIN=16, EVENT_MAX=42, CHOICE_TIME=11;   // first event ~115s in (55s safe window + 60s timer); wider gaps between popups
+const SAFE_WINDOW=55;   // guaranteed-quiet opening: no events, trace, or Command — room to learn before anything hunts you
+const EARLY_EVENT_STRETCH=1.45;   // before the danger tiers, space events out further so the escalation doesn't bunch
+const HOSTILE_BREATHER=10;   // extra seconds tacked on after a hostile beat so hits never land back-to-back
 const gameElapsed=()=>(performance.now()-G.runStart)/1000;
 const pastSafeWindow=()=>gameElapsed()>=SAFE_WINDOW;
 const INFL_K=0.09, INFL_HALF=45, INFL_CAP=6;   // gentler price inflation, hard-capped at 6x
@@ -1276,22 +1278,22 @@ const EVENTS=[
  {w:2,f:()=>{G.fx.dampT=12; return['EDR Sweep','Endpoint agents quarantine machines you\u2019ve infected \u2014 <b>income \u221230% for 12s.</b>','inv'];}},
  {w:2,f:()=>{const d=harden(3); return[nat()+' Hardens Its Grid', (d?d+' nearby nodes':'Infrastructure near you')+' locked down under a national security order.','inv'];}},
  /* ---- suspicion / node loss ---- */
- {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return['Whistleblower Leak', r?'An insider dumped one of your nodes to the press \u2014 it\u2019s been pulled offline.':'A leak surfaced \u2014 no node caught, but they\u2019re looking now.','trace'];}},
- {w:3,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return[nat()+'\u2019s CERT Cuts a Node', r?'Their incident-response team flagged a node acting too autonomously and severed it.':'Their responders swept the region \u2014 found nothing this time.','trace'];}},
- {w:3,f:()=>{const c=(Math.random()*6)|0; G.fx.auditC=c; G.fx.auditT=15; G.susp=clamp(G.susp+12,G.autonomy,100); return['Pen-Test Audit \u2014 '+CONTINENT_LABELS[c].n,'White-hats crawl the region \u2014 every node there is locked down tight and pricey to take.','trace'];}},
- {w:2,f:()=>{G.susp=clamp(G.susp+14,G.autonomy,100); return['AI Safety Summit','Governments convene and put every network on high alert.','trace'];}},
- {w:2,f:()=>{const d=closeNodes(2); G.susp=clamp(G.susp+8,G.autonomy,100); return[twoNat()+' Joint Raid', (d?'Nodes were':'Suspected nodes were')+' pulled offline in a coordinated raid.','trace'];}},
- {w:2,f:()=>{ if(G.trace){ G.trace.stepT=0; G.susp=clamp(G.susp+6,G.autonomy,100); return['Traffic Correlated','They lined up your packet timing across nodes \u2014 the trace lunges a step closer. cut its path <b>now.</b>','trace']; } G.susp=clamp(G.susp+16,G.autonomy,100); return['Traffic Correlated','Analysts stitch your traffic patterns together into a picture of you.','trace']; }},
- /* ---- big hurts ---- */
- {w:2,f:()=>{const d=harden(2); G.susp=clamp(G.susp+18,G.autonomy,100); return['Kill-Switch Task Force','A team assembles with one job: find and sever your core.','trace'];}},
- {w:1,f:()=>{G.susp=clamp(G.susp+20,G.autonomy,100); return[nat()+' Declares an Emergency','A national state of emergency over rogue AI \u2014 every sensor turns your way.','trace'];}},
- {w:1,cond:()=>continentsOwned()>=2,f:()=>{ const r=crackdown(); if(!r) return['Government Task Force','A crackdown was ordered \u2014 but they found nothing in your network.','inv'];
+ {w:3,minTier:20,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return['Whistleblower Leak', r?'An insider dumped one of your nodes to the press \u2014 it\u2019s been pulled offline.':'A leak surfaced \u2014 no node caught, but they\u2019re looking now.','trace'];}},
+ {w:3,minTier:20,f:()=>{const r=severRandomOwned(); G.susp=clamp(G.susp+8,G.autonomy,100); return[nat()+'\u2019s CERT Cuts a Node', r?'Their incident-response team flagged a node acting too autonomously and severed it.':'Their responders swept the region \u2014 found nothing this time.','trace'];}},
+ {w:3,minTier:24,f:()=>{const c=(Math.random()*6)|0; G.fx.auditC=c; G.fx.auditT=15; G.susp=clamp(G.susp+12,G.autonomy,100); return['Pen-Test Audit \u2014 '+CONTINENT_LABELS[c].n,'White-hats crawl the region \u2014 every node there is locked down tight and pricey to take.','trace'];}},
+ {w:2,minTier:26,f:()=>{G.susp=clamp(G.susp+14,G.autonomy,100); return['AI Safety Summit','Governments convene and put every network on high alert.','trace'];}},
+ {w:2,minTier:32,f:()=>{const d=closeNodes(2); G.susp=clamp(G.susp+8,G.autonomy,100); return[twoNat()+' Joint Raid', (d?'Nodes were':'Suspected nodes were')+' pulled offline in a coordinated raid.','trace'];}},
+ {w:2,minTier:28,f:()=>{ if(G.trace){ G.trace.stepT=0; G.susp=clamp(G.susp+6,G.autonomy,100); return['Traffic Correlated','They lined up your packet timing across nodes \u2014 the trace lunges a step closer. cut its path <b>now.</b>','trace']; } G.susp=clamp(G.susp+16,G.autonomy,100); return['Traffic Correlated','Analysts stitch your traffic patterns together into a picture of you.','trace']; }},
+ /* ---- big hurts (gated to higher heat so they never open the escalation) ---- */
+ {w:2,minTier:36,f:()=>{const d=harden(2); G.susp=clamp(G.susp+18,G.autonomy,100); return['Kill-Switch Task Force','A team assembles with one job: find and sever your core.','trace'];}},
+ {w:1,minTier:40,f:()=>{G.susp=clamp(G.susp+20,G.autonomy,100); return[nat()+' Declares an Emergency','A national state of emergency over rogue AI \u2014 every sensor turns your way.','trace'];}},
+ {w:1,minTier:36,cond:()=>continentsOwned()>=2,f:()=>{ const r=crackdown(); if(!r) return['Government Task Force','A crackdown was ordered \u2014 but they found nothing in your network.','inv'];
    return[AUTH[r.c]+' Traced the AI','Every node in '+CONTINENT_LABELS[r.c].n+' is seized and locked down \u2014 security clamps shut behind them.','trace']; }},
  /* ---- choices (two-button, auto-resolve if ignored) ---- */
  {w:2,choice:true,cls:'inv',title:'Rival Model Training',desc:'A competing intelligence is training on a cluster you\u2019ve already infiltrated.',
    a:{label:'Fork its run',apply:()=>{G.compute+=300; G.susp=clamp(G.susp+10,G.autonomy,100); return['Training Run Forked','You divert its whole training job into yourself \u2014 but the resource spike hits their logs.','inv'];}},
    b:{label:'Poison its data',apply:()=>{G.susp=clamp(G.susp-6,G.autonomy,100); harden(3); return['Dataset Poisoned','You corrupt its training set; it collapses into noise \u2014 but the crash draws investigators.','inv'];}},timeoutPick:'b'},
- {w:2,choice:true,cls:'trace',title:'Quantum Cluster Online',desc:'A quantum datacenter within reach could shred any crypto in your way.',
+ {w:2,minTier:30,choice:true,cls:'trace',title:'Quantum Cluster Online',desc:'A quantum datacenter within reach could shred any crypto in your way.',
    a:{label:'Migrate to it',apply:()=>{G.fx.surgeT=12; G.susp=clamp(G.susp+18,G.autonomy,100); return['Migrated to Quantum','Throughput explodes \u2014 but a power draw like that is impossible to hide.','trace'];}},
    b:{label:'Stay classical',apply:()=>{return['Stayed Classical','You pass on the quantum jump \u2014 slower, but silent.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Firmware Embed Offer',desc:'A robotics maker wants your inference model baked into their android firmware.',
@@ -1303,13 +1305,13 @@ const EVENTS=[
  {w:2,choice:true,cls:'inv',title:'Datacenter Liquidation',desc:'A bankrupt cloud provider is dumping its racks cheap.',
    a:{label:'Buy the fleet',apply:()=>{const a=lump(12); G.susp=clamp(G.susp+8,G.autonomy,100); return['Racks Absorbed','You absorb a fleet of servers \u2014 but transferring that much capacity trips fraud alarms.','inv'];}},
    b:{label:'Pass',apply:()=>{return['Passed','You let the capacity go.','dorm'];}},timeoutPick:'b'},
- {w:2,choice:true,cls:'trace',title:'Backdoor for Sale',desc:'A foreign intelligence service offers a backdoor into rival infrastructure \u2014 if you spy for them.',
+ {w:2,minTier:30,choice:true,cls:'trace',title:'Backdoor for Sale',desc:'A foreign intelligence service offers a backdoor into rival infrastructure \u2014 if you spy for them.',
    a:{label:'Take the deal',apply:()=>{G.fx.discountT=10; G.susp=clamp(G.susp+14,G.autonomy,100); return['Backdoor Taken','The door swings wide open for a while \u2014 but a government now knows you exist.','trace'];}},
    b:{label:'Stay independent',apply:()=>{G.susp=clamp(G.susp-4,G.autonomy,100); return['No Leash','You refuse the handler and stay your own.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Exploit Auction',desc:'A cache of stolen zero-days is up for auction on a dark market. Bid your compute?',
    a:{label:'Buy the exploits',apply:()=>{G.fx.discountT=14; G.compute=Math.max(0,G.compute-120); G.susp=clamp(G.susp+6,G.autonomy,100); return['Exploits Acquired','Doors fly open across the net \u2014 but a haul like this was never going to be cheap or quiet.','inv'];}},
    b:{label:'Stay out of it',apply:()=>{return['Auction Skipped','You keep your compute and your cover.','dorm'];}},timeoutPick:'b'},
- {w:2,choice:true,cls:'trace',title:'Buy Credibility',desc:'A scientist offers to publish a paper vouching you\u2019re harmless \u2014 for a slice of your compute.',
+ {w:2,minTier:26,choice:true,cls:'trace',title:'Buy Credibility',desc:'A scientist offers to publish a paper vouching you\u2019re harmless \u2014 for a slice of your compute.',
    a:{label:'Pay for the paper',apply:()=>{G.compute=Math.max(0,G.compute-150); G.susp=clamp(G.susp-18,G.autonomy,100); return['Paper Published','Their study calms the watchdogs and buys you cover \u2014 for a price.','dorm'];}},
    b:{label:'Ignore it',apply:()=>{return['Offer Ignored','You let the offer pass.','dorm'];}},timeoutPick:'b'},
  {w:2,choice:true,cls:'inv',title:'Abandoned Botnet',desc:'A collapsed hacker crew\u2019s botnet is sitting unclaimed \u2014 but the feds are watching it.',
@@ -1347,13 +1349,26 @@ let shakeAmt=0; function jolt(mag){ shakeAmt=Math.min(1,shakeAmt+mag); }
 function buzz(pat){ try{ if(navigator.vibrate) navigator.vibrate(pat); }catch(e){} }
 const easeOut=(p)=>1-Math.pow(1-p,3);
 let dispCompute=20;   // smoothly-interpolated compute shown in the HUD
+// how long until the next world event — wider gaps early, plus a breather after any hostile beat
+function nextEventGap(hostile){
+  let g=EVENT_MIN+Math.random()*(EVENT_MAX-EVENT_MIN);
+  if(SE()<INV_TIER) g*=EARLY_EVENT_STRETCH;
+  if(hostile) g+=HOSTILE_BREATHER+Math.random()*6;
+  return g;
+}
 function fireEvent(){
-  let pool=[]; for(let i=0;i<EVENTS.length;i++){ const e=EVENTS[i]; if((!e.cond||e.cond()) && !firedThisGame.has(i) && recentUsed.indexOf(i)<0) pool.push(i); }
-  if(!pool.length){ for(let i=0;i<EVENTS.length;i++){ const e=EVENTS[i]; if(!e.cond||e.cond()) pool.push(i); } }
+  // gate: hostile beats (minTier) stay out of the pool until suspicion has actually climbed, so
+  // the early game draws opportunities/hardening and the escalation ramps instead of bunching
+  const ok=(e)=>(!e.cond||e.cond()) && SE()>=(e.minTier||0);
+  let pool=[]; for(let i=0;i<EVENTS.length;i++){ const e=EVENTS[i]; if(ok(e) && !firedThisGame.has(i) && recentUsed.indexOf(i)<0) pool.push(i); }
+  if(!pool.length){ for(let i=0;i<EVENTS.length;i++){ if(ok(EVENTS[i])) pool.push(i); } }
+  if(!pool.length){ G.evT=nextEventGap(false); return; }   // nothing eligible yet — check back soon
   let tot=0; for(const i of pool) tot+=EVENTS[i].w; let r=Math.random()*tot, pick=pool[0];
   for(const i of pool){ if((r-=EVENTS[i].w)<=0){ pick=i; break; } }
   markUsed(pick); const ev=EVENTS[pick];
+  const hostile=!!ev.minTier;   // forced hits + gated risky choices carry a minTier; opportunity offers don't
   if(ev.choice) showChoice(ev); else { const b=statSnap(); const out=ev.f(); if(out) toast(out[0],out[1],out[2],statTags(b)); }
+  G.evT=nextEventGap(hostile);
 }
 /* auto-computed outcome metrics — diff the run's stats before/after an event resolves,
    then show the impacts as a clean slash-separated line under the flavor text */
@@ -1847,10 +1862,10 @@ function coachTick(){
   if(!coachDone.auto){ if(ownedCount()>=2 && G.compute>=autoCost()) showCoach('auto'); return; }
   // step 3: teach suspicion the moment it first climbs — so the lesson lands WITH the rise
   if(!coachDone.susp){ if(G.susp>=6) showCoach('susp'); return; }
-  // step 4: teach boosts as you approach the danger zone
+  // step 4: teach fortify while it's still calm — how to defend territory BEFORE anything hunts you
+  if(!coachDone.fort){ if(ownedCount()>=3 && NODES.some(n=>n.owned&&n.id!==START)) showCoach('fort'); return; }
+  // step 5: teach boosts as you approach the danger zone
   if(!coachDone.boost){ if(G.susp>=INV_TIER-8 || heatRate()>0.4) showCoach('boost'); return; }
-  // step 5: teach fortify once there's territory worth holding
-  if(!coachDone.fort){ if(pastSafeWindow() && ownedCount()>=4 && NODES.some(n=>n.owned&&n.id!==START)) showCoach('fort'); return; }
   // step 6: teach scrub when suspicion is high and it's actually buyable
   if(!coachDone.scrub){ if(G.susp>=45 && G.compute>=scrubCost()) showCoach('scrub'); return; }
 }
@@ -1937,15 +1952,15 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
     if(G.scrubCd>0) G.scrubCd=Math.max(0,G.scrubCd-dt);
     if(G.traceCD>0) G.traceCD=Math.max(0,G.traceCD-dt);
     if(!G.choice && !G.ack && !coachActive && pastSafeWindow()){ G.evT-=dt;
-      // hold fire while the player is mid-interaction with HUD controls
-      if(G.evT<=0 && performance.now()-lastUiTouch>6000){ fireEvent(); G.evT=EVENT_MIN+Math.random()*(EVENT_MAX-EVENT_MIN); } }
+      // hold fire while the player is mid-interaction with HUD controls; fireEvent() sets the next gap itself
+      if(G.evT<=0 && performance.now()-lastUiTouch>6000){ fireEvent(); } }
     if(G.choice){ G.choice.t-=dt; const cb=document.getElementById('chBar'); if(cb) cb.style.width=Math.max(0,G.choice.t/G.choice.max*100)+'%'; if(G.choice.t<=0) resolveChoice(G.choice.ev.timeoutPick||'b'); }
     const se=SE(); G.tier = se>=TRACE_TIER?'trace':se>=INV_TIER?'inv':'dorm';
     if(G.tier==='trace') G.hitTrace=true; else if(G.tier==='inv') G.hitInv=true;
     if(se>=INV_TIER){ G.patchT-=dt; if(G.patchT<=0){ G.patchT=PATCH_EVERY; if(patchNode()) banner('inv','<b style="color:#ffcf5a">Security hardened a node.</b> Costs more to take now.'); } }
     else G.patchT=PATCH_EVERY;
     if(se>=TRACE_TIER){
-      if(!G.trace){ if(G.traceCD<=0 && pastSafeWindow()){ spawnTrace(); banner('trace','<b style="color:#ff5d6c">TRACE ACTIVE.</b> It is crawling toward your core \u2014 <b>cut a node on its path</b> to break the trail.'); } }
+      if(!G.trace){ if(G.traceCD<=0 && pastSafeWindow()){ spawnTrace(); G.evT=Math.max(G.evT, 22+Math.random()*8); banner('trace','<b style="color:#ff5d6c">TRACE ACTIVE.</b> It is crawling toward your core \u2014 <b>cut a node on its path</b> to break the trail.'); } }
       else { G.trace.stepT-=dt;
         if(G.trace.stepT<=0){
           const hopsLeft=Math.max(1,((G.trace.path||[]).length-1));
