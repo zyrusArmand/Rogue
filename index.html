@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.86';
+const GAME_VERSION='1.87';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -687,17 +687,17 @@ const OCEAN_LABELS=[["NORTH PACIFIC",-150,6],["SOUTH PACIFIC",-116,-34],["NORTH 
 /* nodes: [lon, lat, type, continentIndex] */
 const NODEDEF=[
  // N. America (0) — far north, coasts, interior + a Greenland node (Greenland is part of N. America)
- [-152,64,'relay',0],[-135,61,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-108,52,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-104,49,'relay',0],[-121,38,'server',0],[-110,41,'relay',0],[-93,41,'hub',0],[-96,31,'fin',0],[-76,39,'server',0],[-82,28,'fin',0],[-113,29,'relay',0],[-103,23,'relay',0],[-88,13,'relay',0],
+ [-152,64,'relay',0],[-135,61,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-108,52,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-104,49,'relay',0],[-121,38,'server',0],[-110,41,'relay',0],[-93,41,'hub',0],[-96,31,'fin',0],[-77,40,'server',0],[-82,28,'fin',0],[-113,29,'relay',0],[-103,23,'relay',0],[-88,13,'relay',0],
  // S. America (1) — both coasts, interior, far south
  [-74,6,'relay',1],[-64,8,'server',1],[-55,3,'relay',1],[-79,-3,'relay',1],[-77,-12,'relay',1],[-38,-8,'server',1],[-52,-11,'hub',1],[-49,-22,'fin',1],[-63,-6,'relay',1],[-64,-17,'relay',1],[-58,-24,'relay',1],[-64,-35,'relay',1],[-70,-46,'relay',1],
  // Europe (2) — spread Iberia→Moscow, north→south; less central crowding
  [-6,40,'relay',2],[-3,53,'server',2],[-19,65,'relay',2],[15,64,'relay',2],[11,51,'hub',2],[14,42,'fin',2],[24,41,'relay',2],[34,50,'relay',2],[40,57,'relay',2],
  // Africa (3) — spread top-to-bottom, coasts, central band filled (Congo, Chad)
- [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[5,6,'server',3],[12,5,'relay',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
+ [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[6,7,'server',3],[12,5,'relay',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
  // Asia (4) — Middle East, India, central-Asia + Siberia bands filled, China, SE-Asia islands, Japan
- [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[73,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[107,15,'relay',4],[139,37,'server',4],[135,53,'relay',4],[162,60,'relay',4],[168,64,'relay',4],
+ [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[74,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[107,15,'relay',4],[139,37,'server',4],[135,53,'relay',4],[162,60,'relay',4],[168,64,'relay',4],
  // Oceania (5) — Australia coasts, NZ, Pacific islands
- [133,-13,'relay',5],[151,-30,'fin',5],[147,-35,'server',5],[134,-25,'hub',5],[116,-31,'relay',5],[169,-42,'relay',5],
+ [133,-13,'relay',5],[151,-30,'fin',5],[147,-35,'server',5],[134,-25,'hub',5],[117,-31,'relay',5],[169.5,-43,'relay',5],
 ];
 const CADJ=[[0,1],[0,2],[0,4],[1,3],[2,3],[2,4],[3,4],[4,5]];
 // tag every drawn-landmass vertex to a continent by its nearest node — but only nodes on the
@@ -1467,6 +1467,18 @@ function relaxNodes(){
       if(dist<margin){ const dx=n.x-mx,dy=n.y-my,len=dist||1; const push=(margin-dist)*0.6; n.x+=dx/len*push; n.y+=dy/len*push; moved++; } }
     for(const n of NODES){ n.x=clamp(n.x,PADX+8,CSSW-PADX-8); n.y=clamp(n.y,MAP_Y0+10,MAP_Y0+MAP_H-8); }
     if(!moved) break;
+  }
+  // safety net: never leave a node stranded in open water — pull any offshore node back onto land
+  for(const n of NODES){
+    const lon=invLon(n.x), lat=invLat(n.y);
+    if(onLandLL(lon,lat)||onIceLL(lon,lat)) continue;
+    let best=null;
+    // 1) walk back toward the node's authored home coordinate (authored coords sit on land)
+    for(let t=0.1;t<=1.0001&&!best;t+=0.1){ const tl=lon+(n.lon-lon)*t, tt=lat+(n.lat-lat)*t; if(onLandLL(tl,tt)||onIceLL(tl,tt)) best=[tl,tt]; }
+    // 2) fallback: spiral outward for any nearby land
+    for(let r=0.4;r<=14&&!best;r+=0.4){ for(let a=0;a<360;a+=15){ const tl=lon+r*Math.cos(a*Math.PI/180), tt=lat+r*Math.sin(a*Math.PI/180);
+      if(onLandLL(tl,tt)||onIceLL(tl,tt)){ best=[tl,tt]; break; } } }
+    if(best){ n.x=projX(best[0]); n.y=projY(best[1]); }
   }
 }
 window.addEventListener('resize',layout);
