@@ -152,6 +152,11 @@
   .cmpulse.rectp::after{border-radius:13px;}
   .cmpulse.warn::after{border-color:rgba(255,93,108,.7);}
   @keyframes cmRing{0%{opacity:.8;transform:scale(.9);}100%{opacity:0;transform:scale(1.7);}}
+  /* pulsating glow + expanding ring on popups — same feel as the coach highlight, in each popup's colour (--pc = "r,g,b") */
+  .popglow{animation:popGlow 1.5s ease-in-out infinite;}
+  @keyframes popGlow{0%,100%{box-shadow:0 16px 46px rgba(0,0,0,.7),0 0 15px 2px rgba(var(--pc),.34);}50%{box-shadow:0 16px 46px rgba(0,0,0,.7),0 0 32px 7px rgba(var(--pc),.6);}}
+  .popglow::after{content:'';position:absolute;inset:-2px;border-radius:inherit;border:2px solid rgba(var(--pc),.75);pointer-events:none;animation:popRing 1.5s ease-out infinite;}
+  @keyframes popRing{0%{opacity:.7;transform:scale(1);}70%{opacity:0;transform:scale(1.045);}100%{opacity:0;transform:scale(1.045);}}
   /* home title — white letters, targeting frame, green scanner sweep */
   #titleWrap{position:relative;margin:8px 0 4px;padding:12px 26px 10px;}
   #titleWrap .tc{position:absolute;width:15px;height:15px;border:0 solid rgba(55,224,255,.9);pointer-events:none;}
@@ -355,7 +360,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.89';
+const GAME_VERSION='1.90';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1094,6 +1099,7 @@ function openBreach(target, mode){
     +'<div style="font-size:11.5px;color:#f2d0d4;margin:6px 0 13px;line-height:1.35">'+sub+'</div>'
     +'<div style="display:flex;gap:9px"><button id="brA" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.a.label+'</button>'
     +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>';
+  popGlow(breachEl,'#ff5d6c');
   breachEl.style.display='block';
   bindTap(document.getElementById('brA'), ()=>resolveBreach(0));
   bindTap(document.getElementById('brB'), ()=>resolveBreach(1));
@@ -1103,7 +1109,7 @@ function breachOutcome(win,title,desc,tags){
   const col=win?'#4fd1a8':'#ff5d6c';
   if(!breachEl){ G.ack=false; return; }
   breachEl.style.transition='border-color .35s, box-shadow .35s, background .35s';
-  breachEl.style.borderColor=col; breachEl.style.background=win?'rgba(8,22,16,.99)':'rgba(24,8,10,.99)';
+  breachEl.style.borderColor=col; breachEl.style.background=win?'rgba(8,22,16,.99)':'rgba(24,8,10,.99)'; breachEl.style.setProperty('--pc', popRgb(col));
   breachEl.style.boxShadow='0 16px 46px rgba(0,0,0,.75),0 0 30px '+col+'66';
   breachEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.85">OUTCOME</div>'
     +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+';margin-top:5px">'+title+'</div>'
@@ -1169,6 +1175,7 @@ function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div')
     +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+'</div>'
     +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">They found you in <b>'+CONTINENT_LABELS[c].n+'</b> and are hitting your nodes. <b>Fortified nodes hold.</b> On an open node, pick a defense to fight back \u2014 lose it and it turns <b style="color:#ff5d6c">red</b>. Tap a red node to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
+  popGlow(cmdPopEl,'#ff5d6c');
   cmdPopEl.style.display='block'; G.ack=true;
   bindTap(document.getElementById('cmdAck'), ()=>{ cmdPopEl.style.display='none'; G.ack=false; eventBreather(); });
 }
@@ -1398,6 +1405,7 @@ function showChoice(ev){ if(!choiceEl){ choiceEl=document.createElement('div'); 
     +'<button id="chB" style="flex:1;padding:12px 8px;border:1.5px solid '+col+';border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:transparent;color:'+col+'">'+ev.b.label+'</button></div>'
     +'<div style="height:3px;margin-top:10px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden"><div id="chBar" style="height:100%;width:100%;background:'+col+'"></div></div>'
     +'<div style="font-size:9px;color:#6b7c92;margin-top:5px">choose before the timer runs out</div>';
+  popGlow(choiceEl,col);
   choiceEl.style.display='block'; beep(ev.cls==='trace'?200:330,0.1,0.05);
   bindTap(document.getElementById('chA'), ()=>resolveChoice('a'));
   bindTap(document.getElementById('chB'), ()=>resolveChoice('b'));
@@ -1412,7 +1420,7 @@ function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choi
   if(!choiceEl){ toast(title,desc,cls,tags); return; }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
   choiceEl.style.transition='border-color .35s, box-shadow .35s';
-  choiceEl.style.borderColor=col; choiceEl.style.boxShadow='0 16px 46px rgba(0,0,0,.7),0 0 26px '+col+'44';
+  choiceEl.style.borderColor=col; choiceEl.style.boxShadow='0 16px 46px rgba(0,0,0,.7),0 0 26px '+col+'44'; choiceEl.style.setProperty('--pc', popRgb(col));
   choiceEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:'+col+';font-weight:800;opacity:.8;margin-bottom:5px">OUTCOME</div>'
     +'<div class="evfx" style="font-weight:800;font-size:16px;color:'+col+'">'+title+'</div>'
     +'<div class="evfx" style="font-size:12.5px;color:#dbe4f0;margin:6px 0 '+(tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
@@ -1421,6 +1429,10 @@ function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choi
   G.ack=true; beep(cls==='trace'?190:340,0.09,0.05);
   bindTap(document.getElementById('ackBtn'), ()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); });
 }
+// "#rrggbb" -> "r,g,b" for the --pc pulse-glow variable
+function popRgb(hex){ hex=hex.replace('#',''); const n=parseInt(hex,16); return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255); }
+// give a popup the pulsating glow + expanding ring in its own colour
+function popGlow(el,col){ el.classList.add('popglow'); el.style.setProperty('--pc', popRgb(col)); }
 let toastEl=null, toastT=0;
 function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.id='evtoast'; document.getElementById('frame').appendChild(toastEl); }
   const col= cls==='trace'?'#ff5d6c':cls==='inv'?'#ffcf5a':'#4fd1a8';
@@ -1431,6 +1443,7 @@ function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElemen
     +'<div style="font-size:12.5px;color:#dbe4f0;margin:6px 0 '+(tags&&tags.length?'8px':'13px')+';line-height:1.4">'+desc+'</div>'
     +metricLine(tags,col)
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
+  popGlow(toastEl,col);
   toastEl.style.display='block'; beep(cls==='trace'?190:340,0.09,0.05);
   bindTap(document.getElementById('ackBtn'), dismissAck);
   G.ack=true;
@@ -1688,28 +1701,29 @@ let baseCvs=null, baseCtx=null;
 function paintBiome(b, poly, rgb, rmin, rmax, alpha, edge){
   let a=1e9,B=-1e9,c=1e9,d=-1e9; for(const q of poly){ if(q[0]<a)a=q[0]; if(q[0]>B)B=q[0]; if(q[1]<c)c=q[1]; if(q[1]>d)d=q[1]; }
   const sw=Math.abs(projX(B)-projX(a)), sh=Math.abs(projY(c)-projY(d));
-  const n=Math.min(760, Math.max(30, Math.round(sw*sh/(rmin*rmin*Math.PI)*3.0)));
-  // smooth interior-ness: sample two rings out to 2*edge so the value ramps down gradually toward the coast
+  const n=Math.min(1300, Math.max(40, Math.round(sw*sh/(rmin*rmin*Math.PI)*4.4)));
+  // interior-ness: only the last ~edge° near the boundary fades, so the bulk of a zone fills EVENLY
+  // (a filled region, not a centre-heavy circular blob) and just the rim feathers into its neighbour
   const inside=(x,y)=>ptInPoly(x,y,poly)?1:0;
   const interiorAt=(lon,lat)=>{
     let s=0, w=0;
     for(const [dx,dy] of [[edge,0],[-edge,0],[0,edge],[0,-edge]]){ s+=inside(lon+dx,lat+dy); w++; }
-    for(const [dx,dy] of [[2*edge,0],[-2*edge,0],[0,2*edge],[0,-2*edge],[1.4*edge,1.4*edge],[-1.4*edge,1.4*edge],[1.4*edge,-1.4*edge],[-1.4*edge,-1.4*edge]]){ s+=inside(lon+dx,lat+dy)*0.5; w+=0.5; }
-    return s/w;   // ~1 deep inside, tapering smoothly to 0 near the edge
+    for(const [dx,dy] of [[2*edge,0],[-2*edge,0],[0,2*edge],[0,-2*edge]]){ s+=inside(lon+dx,lat+dy)*0.5; w+=0.5; }
+    return s/w;   // ~1 through the interior, ramping to 0 only within ~2*edge of the boundary
   };
   let done=0, tries=0;
   while(done<n && tries<n*6){ tries++;
     const lon=a+Math.random()*(B-a), lat=c+Math.random()*(d-c);
     if(!ptInPoly(lon,lat,poly)) continue;
     const interior=interiorAt(lon,lat);
-    // density tapers with the square of interior-ness → gentle thinning toward the edge, no hard rim
-    if(Math.random() > 0.14+interior*interior*0.86) continue;
+    // near-full density across the interior; only the thin rim thins out → no clustered circles
+    if(Math.random() > 0.35+interior*0.65) continue;
     done++;
-    // deeper dabs run larger + softer; edge dabs stay small so the wash feathers out instead of banding
-    const px=projX(lon), py=projY(lat), r=rmin+(rmax-rmin)*(0.3+0.7*interior)*(0.6+Math.random()*0.4);
-    const al=alpha*(0.28+interior*0.72)*(0.55+Math.random()*0.4);
+    // dab size is independent of position (even texture); alpha eases down only at the rim
+    const px=projX(lon), py=projY(lat), r=rmin+(rmax-rmin)*Math.random();
+    const al=alpha*(0.45+interior*0.55)*(0.7+Math.random()*0.3);
     const g=b.createRadialGradient(px,py,0,px,py,r);
-    g.addColorStop(0,'rgba('+rgb+','+al.toFixed(3)+')'); g.addColorStop(.55,'rgba('+rgb+','+(al*0.45).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
+    g.addColorStop(0,'rgba('+rgb+','+al.toFixed(3)+')'); g.addColorStop(.6,'rgba('+rgb+','+(al*0.5).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill();
   }
 }
@@ -1741,14 +1755,15 @@ function buildBasemap(){ if(!CSSW) return;
     const g=b.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,'rgba('+col+','+(0.03+Math.random()*0.045).toFixed(3)+')'); g.addColorStop(1,'rgba('+col+',0)');
     b.fillStyle=g; b.beginPath(); b.arc(px,py,r,0,6.283); b.fill(); }
   // BIOME LAYOUT — brown-dominant on arid continents, green reclaimed only in the wet belts.
+  // small edge = fills evenly with only a thin feathered rim (no clustered circles, clean brown→green fade)
   // 1) broad semi-arid/steppe/savanna zones turn most of the land warm brown
-  for(const poly of ARID) paintBiome(b, poly, '158,140,100', 16, 42, 0.28, 3.5);
+  for(const poly of ARID) paintBiome(b, poly, '158,140,100', 12, 26, 0.13, 1.7);
   // 2) bright sand desert cores sit inside the arid zones
-  for(const poly of DESERT) paintBiome(b, poly, '180,160,114', 14, 40, 0.22, 3);
+  for(const poly of DESERT) paintBiome(b, poly, '180,160,114', 11, 24, 0.12, 1.5);
   // 3) mountains — brown ridge + lighter crest
-  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 10, 24, 0.19, 1.8); paintBiome(b, poly, '178,160,130', 6, 14, 0.10, 1.5); }
+  for(const poly of MTN){ paintBiome(b, poly, '120,92,62', 9, 19, 0.16, 1.4); paintBiome(b, poly, '178,160,130', 6, 13, 0.09, 1.2); }
   // 4) forests / wet belts reclaim green on top (Congo, Amazon, Siberia, SE Asia, coasts) so the greens land where reality has them
-  for(const poly of FOREST) paintBiome(b, poly, '40,82,50', 15, 40, 0.30, 3.2);
+  for(const poly of FOREST) paintBiome(b, poly, '40,82,50', 12, 26, 0.17, 1.7);
   // very fine surface grain (barely there)
   for(let i=0;i<220;i++){ const x=Math.random()*CSSW, y=MAP_Y0+Math.random()*MAP_H;
     b.fillStyle='rgba(0,0,0,'+(0.015+Math.random()*0.03).toFixed(3)+')'; b.fillRect(x,y,Math.random()*2+.5,Math.random()*2+.5); }
@@ -1786,6 +1801,7 @@ function continentPopup(b){ if(!contPopEl){ contPopEl=document.createElement('di
     +'<div style="font-weight:800;font-size:18px;color:var(--gold);margin-top:5px;text-shadow:0 0 14px rgba(255,179,71,.5)">'+CONTINENT_LABELS[b.c].n+'</div>'
     +'<div style="font-size:13px;color:#ffe0b0;margin-top:6px;line-height:1.35"><b>'+b.desc.charAt(0).toUpperCase()+b.desc.slice(1)+'</b></div>'
     +'<div style="font-size:9.5px;color:#c9a86a;margin-top:7px">held while you control every node here</div>';
+  popGlow(contPopEl,'#ffb347');
   requestAnimationFrame(()=>{ if(contPopEl) contPopEl.style.opacity='1'; }); contPopT=3.6;
 }
 
