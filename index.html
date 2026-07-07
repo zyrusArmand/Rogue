@@ -238,6 +238,8 @@
   .hudbtn{width:26px;height:26px;border:1px solid rgba(85,110,140,.45);background:rgba(9,15,25,.65);color:#8899b3;
     border-radius:4px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
   .hudbtn.arm{width:auto;padding:0 8px;font-size:9px;letter-spacing:.08em;color:var(--red);border-color:rgba(255,93,108,.6);}
+  #zoomctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:15;pointer-events:auto;}
+  #zoomctl .hudbtn{width:34px;height:34px;font-size:19px;background:rgba(9,15,25,.8);}
 </style>
 </head>
 <body>
@@ -260,6 +262,11 @@
       <button class="hudbtn" id="restartBtn" title="Restart run">↺</button>
       <button class="hudbtn" id="menuBtn" title="Menu">≡</button>
     </div>
+  </div>
+
+  <div id="zoomctl">
+    <button class="hudbtn" id="zoomIn" title="Zoom in">+</button>
+    <button class="hudbtn" id="zoomOut" title="Zoom out">−</button>
   </div>
 
   <div id="banner" class="dorm" style="display:none"></div>
@@ -360,7 +367,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.92';
+const GAME_VERSION='1.93';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -807,7 +814,7 @@ function newGame(){
      peakNodes:1, hitTrace:false, hitInv:false, breachesFaced:0, breachesWon:0, boostsUsed:0, scrubsUsed:0, fortifies:0, contRunHolds:0};
   firedThisGame=new Set(); recentUsed=loadRecent(); if(choiceEl)choiceEl.style.display='none'; if(toastEl)toastEl.style.display='none'; if(contPopEl)contPopEl.style.display='none'; if(cmdPopEl)cmdPopEl.style.display='none'; if(breachEl)breachEl.style.display='none'; if(techEl)techEl.style.display='none'; shakeAmt=0;
   coachDone=loadCoach(); coachActive=null; { const c=document.getElementById('coach'); if(c){ c.classList.remove('show'); c.innerHTML=''; } }
-  SPREADS=[]; dispCompute=G.compute;
+  SPREADS=[]; dispCompute=G.compute; resetCam();
   layout(); { const bn=document.getElementById('banner'); bn.className='dorm'; bn.innerHTML=''; bn.style.opacity='0'; G.bannerT=0; } showPanel();
 }
 function buildLinks(){ LINKS=[]; const seen={}; const key=(a,b)=>a<b?a+'-'+b:b+'-'+a;
@@ -1463,6 +1470,16 @@ function bindTap(btn, fn){ if(!btn) return; const h=(e)=>{ if(e){ e.preventDefau
 /* canvas */
 const cvs=document.getElementById('net'),ctx=cvs.getContext('2d');
 let DPR=Math.min(window.devicePixelRatio||1,2),CSSW=0,CSSH=0,PADX=8;
+/* camera — zoom + pan over the map. s=1 shows the whole world; higher zooms in. x/y are the
+   pan offset in CSS px. world→screen: sx = wx*s + x. screen→world: wx = (sx - x)/s. */
+let cam={s:1,x:0,y:0}; const MINZ=1, MAXZ=3.4;
+function clampCam(){ cam.s=clamp(cam.s,MINZ,MAXZ); const cw=CSSW*cam.s, ch=CSSH*cam.s;
+  cam.x = cw<=CSSW ? (CSSW-cw)/2 : clamp(cam.x, CSSW-cw, 0);
+  cam.y = ch<=CSSH ? (CSSH-ch)/2 : clamp(cam.y, CSSH-ch, 0); }
+function zoomAt(sx,sy,f){ const wx=(sx-cam.x)/cam.s, wy=(sy-cam.y)/cam.s; cam.s=clamp(cam.s*f,MINZ,MAXZ); cam.x=sx-wx*cam.s; cam.y=sy-wy*cam.s; clampCam(); }
+function zoomBy(f){ zoomAt(CSSW/2,CSSH/2,f); }
+function resetCam(){ cam.s=1; cam.x=0; cam.y=0; clampCam(); }
+const w2sX=(x)=>x*cam.s+cam.x, w2sY=(y)=>y*cam.s+cam.y;
 const LAT_TOP=82.5, LAT_BOT=-53.5; let MAP_H=0, MAP_Y0=0;
 const MILLER=(lat)=>1.25*Math.asinh(Math.tan(0.8*lat*Math.PI/180));
 const MYT=MILLER(LAT_TOP), MYB=MILLER(LAT_BOT);
@@ -1477,6 +1494,7 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
   MAP_H=(CSSW-2*PADX)*(MYT-MYB)/(2*Math.PI); if(MAP_H>CSSH*0.99) MAP_H=CSSH*0.99; MAP_Y0=(CSSH-MAP_H)/2;
   for(const n of NODES){ n.x=projX(n.lon); n.y=projY(n.lat); }
   relaxNodes();
+  clampCam();   // keep the camera valid across resizes/orientation changes
   buildBasemap(); }
 /* push nodes apart so none overlap — hubs and financial nodes claim more room than relays */
 function spaceRadius(n){ return n.type==='hub'?24:n.type==='fin'?19:n.type==='server'?15:13; }
@@ -1512,31 +1530,53 @@ function relaxNodes(){
   }
 }
 window.addEventListener('resize',layout);
-function tap(ox,oy){ if(G.over||G.ack||G.choice||G.techPick!=null||coachModal)return;
-  // ox/oy are offsetX/offsetY — computed by the browser relative to the canvas box,
-  // immune to iOS visual-viewport scroll/zoom drift; normalize to bitmap coords
-  let px=ox,py=oy; const bw=cvs.clientWidth,bh=cvs.clientHeight;
-  if(bw>0&&bh>0){ px*=CSSW/bw; py*=CSSH/bh; }
-  // visible ring at the registered touch point — instant feedback that aim matches finger
+function tap(px,py){ if(G.over||G.ack||G.choice||G.techPick!=null||coachModal)return;
+  // px,py are CSS/screen coords — show the ring at the finger
   { const m=document.createElement('div'); m.className='tapmark'; m.style.left=px+'px'; m.style.top=py+'px';
     document.getElementById('frame').appendChild(m); setTimeout(()=>m.remove(),900); }
+  // convert to world coords (undo the camera) so hit-testing works at any zoom/pan
+  const wx=(px-cam.x)/cam.s, wy=(py-cam.y)/cam.s;
   // pick within reach, preferring nodes you can act on — a locked hub shouldn't
   // steal the tap from the small relay next to it
   let best=null,bd=1e9;
-  for(const n of NODES){ const dd=(px-n.x)**2+(py-n.y)**2; if(dd>34*34) continue;
+  for(const n of NODES){ const dd=(wx-n.x)**2+(wy-n.y)**2; if(dd>34*34) continue;
     const actionable=n.owned||n.enemy||canTake(n);
     const score=dd*(actionable?1:2.4);
     if(score<bd){bd=score;best=n;} }
   if(!best){ G.sel=-1; showPanel(); return; }
   G.sel=best.id; showPanel(); }
-/* one modern input path — pointer events keep mouse and touch coordinates consistent */
-cvs.addEventListener('pointerdown',e=>{ e.preventDefault(); tap(e.offsetX,e.offsetY); });
-/* block pinch-zoom during gameplay: a zoomed page desyncs touch coords from the map */
+/* one modern input path — pointer events drive tap, one-finger pan (when zoomed), and pinch-zoom.
+   offset coords are normalized to CSS px so aim matches the finger regardless of canvas scaling. */
+function evCss(e){ const bw=cvs.clientWidth,bh=cvs.clientHeight; return { x:e.offsetX*(bw>0?CSSW/bw:1), y:e.offsetY*(bh>0?CSSH/bh:1) }; }
+const ptrs=new Map(); let downCss=null, downMoved=false, panBase=null, pinchBase=null;
+cvs.addEventListener('pointerdown',e=>{ e.preventDefault(); try{cvs.setPointerCapture(e.pointerId);}catch(_){}
+  const c=evCss(e); ptrs.set(e.pointerId,c);
+  if(ptrs.size===1){ downCss=c; downMoved=false; panBase={x:c.x,y:c.y,cx:cam.x,cy:cam.y}; pinchBase=null; }
+  else if(ptrs.size===2){ const v=[...ptrs.values()]; pinchBase={d:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y)||1,mx:(v[0].x+v[1].x)/2,my:(v[0].y+v[1].y)/2,s:cam.s,cx:cam.x,cy:cam.y}; panBase=null; downMoved=true; } });
+cvs.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId))return; const c=evCss(e); ptrs.set(e.pointerId,c);
+  if(ptrs.size>=2 && pinchBase){ const v=[...ptrs.values()]; const d=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y)||1, mx=(v[0].x+v[1].x)/2, my=(v[0].y+v[1].y)/2;
+    const ns=clamp(pinchBase.s*d/pinchBase.d,MINZ,MAXZ);
+    const wx=(pinchBase.mx-pinchBase.cx)/pinchBase.s, wy=(pinchBase.my-pinchBase.cy)/pinchBase.s;
+    cam.s=ns; cam.x=mx-wx*ns; cam.y=my-wy*ns; clampCam(); }
+  else if(ptrs.size===1 && panBase){ if(Math.abs(c.x-downCss.x)+Math.abs(c.y-downCss.y)>8) downMoved=true;
+    if(cam.s>1.001){ cam.x=panBase.cx+(c.x-panBase.x); cam.y=panBase.cy+(c.y-panBase.y); clampCam(); } } });
+function ptrEnd(e){ if(!ptrs.has(e.pointerId))return; const wasOne=ptrs.size===1; ptrs.delete(e.pointerId);
+  if(wasOne && !downMoved && downCss) tap(downCss.x,downCss.y);
+  if(ptrs.size<2) pinchBase=null;
+  if(ptrs.size===1){ const only=[...ptrs.values()][0]; downCss=only; downMoved=true; panBase={x:only.x,y:only.y,cx:cam.x,cy:cam.y}; }
+  else if(ptrs.size===0){ panBase=null; downCss=null; } }
+cvs.addEventListener('pointerup',ptrEnd);
+cvs.addEventListener('pointercancel',ptrEnd);
+/* block the browser's own pinch-zoom during gameplay — we handle zoom ourselves */
 document.addEventListener('gesturestart',e=>{ if(!anyMenuShown()) e.preventDefault(); });
+/* zoom buttons */
+{ const zi=document.getElementById('zoomIn'), zo=document.getElementById('zoomOut');
+  if(zi) zi.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); zoomBy(1.4); });
+  if(zo) zo.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); zoomBy(1/1.4); }); }
 /* iOS can still nudge the document despite overflow:hidden — pin it, drifting desyncs touch */
 window.addEventListener('scroll',()=>{ if(window.scrollX||window.scrollY) window.scrollTo(0,0); },{passive:true});
 function floatAt(n,txt,col){ const f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.color=col;
-  f.style.left=(n.x-16)+'px'; f.style.top=(n.y-12)+'px'; document.getElementById('frame').appendChild(f); setTimeout(()=>f.remove(),1000); }
+  f.style.left=(w2sX(n.x)-16)+'px'; f.style.top=(w2sY(n.y)-12)+'px'; document.getElementById('frame').appendChild(f); setTimeout(()=>f.remove(),1000); }
 function banner(cls,html){}   // bottom-left banner removed — the HUD bars and popups carry the signal
 function renderUps(){ const wrap=document.getElementById('ups'); wrap.innerHTML='';
   UPS.forEach(u=>{ const b=G.boost[u.id], c=upCost(u), act=b.t>0, cd=b.cd>0, af=G.compute>=c;
@@ -1836,9 +1876,9 @@ function coachSeen(id){ coachDone[id]=1; try{ store.set('rogue_coach',JSON.strin
 let coachCoolUntil=0;   // breathing room between tips — back-to-back tutorials feel clunky
 function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; coachModal=false; const wasIntro=coachActive==='intro'; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+(wasIntro?0:22000); }
 function anchorRect(a){
-  if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)&&G.compute>=nodeCost(x))||NODES.find(canTake); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
-  if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
-  if(a==='fortTarget'){ const n=NODES.find(x=>x.owned&&x.id!==START); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
+  if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)&&G.compute>=nodeCost(x))||NODES.find(canTake); if(!n)return null; return {x:w2sX(n.x),y:w2sY(n.y),r:16*cam.s}; }
+  if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:w2sX(n.x),y:w2sY(n.y),r:16*cam.s}; }
+  if(a==='fortTarget'){ const n=NODES.find(x=>x.owned&&x.id!==START); if(!n)return null; return {x:w2sX(n.x),y:w2sY(n.y),r:16*cam.s}; }
   const el=document.querySelector(a); if(!el)return null; const fr=document.getElementById('frame').getBoundingClientRect(), b=el.getBoundingClientRect();
   if(ROT) return {x:b.top-fr.top+b.height/2, y:fr.right-b.left-b.width/2, r:Math.max(b.width,b.height)/2+6, w:b.height, h:b.width};
   // element anchors carry their box so the highlight matches the control's shape
@@ -2029,6 +2069,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
     fr.style.transform=base+'translate('+((Math.random()*2-1)*m).toFixed(1)+'px,'+((Math.random()*2-1)*m).toFixed(1)+'px)'; shakeAmt=Math.max(0,shakeAmt-dt*3.2); if(shakeAmt<=0.002) fr.style.transform=ROT?'rotate(90deg)':''; }
   // draw
   ctx.clearRect(0,0,CSSW,CSSH);
+  ctx.save(); ctx.translate(cam.x,cam.y); ctx.scale(cam.s,cam.s);   // camera: zoom/pan the world (HUD stays fixed)
   if(!baseCvs) buildBasemap();
   if(baseCvs) ctx.drawImage(baseCvs,0,0,CSSW,CSSH);
   // held-continent coastlines pulse in each continent's own color — territory read at a glance
@@ -2136,6 +2177,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
     for(const n of NODES){ if(Math.hypot(n.x-core.x,n.y-core.y)<wr){ ctx.beginPath();ctx.arc(n.x,n.y,5,0,6.28);ctx.fillStyle='rgba(120,240,255,.95)';ctx.shadowColor='#37e0ff';ctx.shadowBlur=11;ctx.fill();ctx.shadowBlur=0; } }
     ctx.strokeStyle='rgba(180,245,255,'+(0.7*(1-p))+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(core.x,core.y,wr,0,6.28);ctx.stroke();
     if(p>0.82){ ctx.fillStyle='rgba(210,248,255,'+((p-0.82)/0.18*0.7)+')';ctx.fillRect(0,0,CSSW,CSSH); } }
+  ctx.restore();   // end camera transform — everything below is screen-space
   if(G.bannerT>0){ G.bannerT-=dt; if(G.bannerT<=0){ const be=document.getElementById('banner'); if(be) be.style.opacity='.32'; } }
   if(contPopEl && contPopT>0){ contPopT-=dt; if(contPopT<=0){ contPopEl.style.opacity='0'; } }
 
