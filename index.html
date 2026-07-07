@@ -355,7 +355,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.88';
+const GAME_VERSION='1.89';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -371,10 +371,10 @@ const f1=(n)=>n.toFixed(1);
 
 /* node economy — paybacks kept sensible (~10-20s); hubs are premium & gated */
 const TYPES={
-  relay:{name:'Relay Node',   col:[108,197,255], cost:10,  inc:0.7, susp:2,  shape:'dot'},
-  server:{name:'Server',      col:[46,230,255],  cost:26,  inc:1.7, susp:3,  shape:'hex'},
-  fin:  {name:'Financial Hub', col:[255,190,77], cost:65,  inc:3.8, susp:10, shape:'diamond'},
-  hub:  {name:'Data Core',    col:[84,240,160],  cost:170, inc:11.5, susp:15, main:true, shape:'core'},
+  relay:{name:'Relay Node',   col:[108,197,255], cost:10,  inc:0.7, susp:1,  shape:'dot'},
+  server:{name:'Server',      col:[46,230,255],  cost:26,  inc:1.7, susp:1.6, shape:'hex'},
+  fin:  {name:'Financial Hub', col:[255,190,77], cost:65,  inc:3.8, susp:5,  shape:'diamond'},
+  hub:  {name:'Data Core',    col:[84,240,160],  cost:170, inc:11.5, susp:8,  main:true, shape:'core'},
 };
 /* world map — landmasses as [lon,lat] outlines (equirectangular), verified visually */
 /* exact-trace coastlines from reference map (Miller projection) */
@@ -757,7 +757,7 @@ function applyLoadout(){ let l=loadLoadout();
 const upCost=(u)=>Math.round(u.cost*(1+income()/50)*(skHas('x2')?0.85:1));
 
 /* tuning */
-const K_INCOME_HEAT=0.036, K_AUTO_HEAT=0.02, HEAT_DECAY=1.5;   // expansion warms you faster — the opening should bite sooner
+const K_INCOME_HEAT=0.028, K_AUTO_HEAT=0.016, HEAT_DECAY=1.5;   // gentler passive heat — room to build economy before the world clamps down
 const TRACE_SECONDS=20, PATCH_EVERY=8, SEVER_EVERY=5, AUTO_CD=0, TRACE_RESPAWN=16;
 const AUTO_BASE=200, AUTO_GROWTH=1.20, AUTO_STEP=5;   // 20 steps to 100% — pricier so compute is a real sink
 const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutting always breaks the trail
@@ -1086,8 +1086,8 @@ function openBreach(target, mode){
   const who = mode==='trace' ? 'The trace' : (G.command?G.command.name:'The agent');
   const kicker = mode==='trace' ? 'TRACE AT YOUR NODE' : 'NODE BREACH';
   const sub = mode==='trace'
-    ? 'Pick a countermeasure. Win and you <b>break the trace and keep the node</b> \u2014 lose and it pushes on and your suspicion spikes.'
-    : 'Pick your countermeasure. Choose well and you repel them \u2014 choose wrong and the node falls.';
+    ? 'Pick the right defense. Win and you <b>break the trace and keep the node</b> \u2014 lose and it pushes on.'
+    : 'Pick the right defense. Get it right and you hold \u2014 get it wrong and the node falls.';
   breachEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:27;width:min(440px,90%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.75),0 0 30px rgba(255,93,108,.45);pointer-events:auto;';
   breachEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">'+kicker+'</div>'
     +'<div style="font-weight:800;font-size:15px;color:#ff8a94;margin-top:5px">'+who+' '+sc.vector+'</div>'
@@ -1165,9 +1165,9 @@ function defeatCommand(msg,cleared){ const c=G.command?G.command.region:-1; if(c
 let cmdPopEl=null, cmdPopT=0;
 function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div'); cmdPopEl.id='cmdPop'; document.getElementById('frame').appendChild(cmdPopEl); }
   cmdPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(430px,88%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.72),0 0 26px rgba(255,93,108,.4);pointer-events:auto;';
-  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">HUMAN COUNTER-OFFENSIVE</div>'
-    +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+' is online</div>'
-    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.4">They\u2019ve detected you in <b>'+CONTINENT_LABELS[c].n+'</b> and are attacking your nodes. <b>Fortified nodes hold the line</b>; on an unfortified node you\u2019ll pick a <b>countermeasure</b> to fight them off. Lose the fight and the node turns <b style="color:#ff5d6c">enemy-red</b> \u2014 attack it to take it back.</div>'
+  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">THEY\u2019RE FIGHTING BACK</div>'
+    +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+'</div>'
+    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">They found you in <b>'+CONTINENT_LABELS[c].n+'</b> and are hitting your nodes. <b>Fortified nodes hold.</b> On an open node, pick a defense to fight back \u2014 lose it and it turns <b style="color:#ff5d6c">red</b>. Tap a red node to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
   cmdPopEl.style.display='block'; G.ack=true;
   bindTap(document.getElementById('cmdAck'), ()=>{ cmdPopEl.style.display='none'; G.ack=false; eventBreather(); });
@@ -1497,7 +1497,7 @@ function relaxNodes(){
   }
 }
 window.addEventListener('resize',layout);
-function tap(ox,oy){ if(G.over||G.ack||G.choice||G.techPick!=null)return;
+function tap(ox,oy){ if(G.over||G.ack||G.choice||G.techPick!=null||coachModal)return;
   // ox/oy are offsetX/offsetY — computed by the browser relative to the canvas box,
   // immune to iOS visual-viewport scroll/zoom drift; normalize to bitmap coords
   let px=ox,py=oy; const bw=cvs.clientWidth,bh=cvs.clientHeight;
@@ -1651,17 +1651,26 @@ function typeLine(c,l,next){
       const fin=()=>{ if(l.fx==='boom'){ beep(65,0.9,0.14); tone(50,1.1,0.09,0.05); d.classList.add('slam'); }
         else beep(l.cls==='me'?220:640,l.cls==='me'?0.2:0.05,l.cls==='me'?0.06:0.02);
         storyTimers.push(setTimeout(next,l.fx==='boom'?900:(l.cls==='me'?650:(l.cls&&l.cls.indexOf('warn')>=0?450:230)))); };
-      if(l.fx==='glitch') glitchLine(d,txt,fin); else fin(); } },l.spd||20);
+      if(l.fx==='glitch') glitchLine(d,txt,fin); else fin(); } },Math.round((l.spd||20)*1.3));
   storyTimers.push(iv);
 }
+/* story advances one line at a time — the reader taps Next (or anywhere) to continue, so nothing
+   scrolls past before it's read. Blackout beats auto-advance since they carry no text. */
+let storyWaiting=false, storyAdvanceFn=null;
 function playStory(){ const c=document.getElementById('storyLines'); c.innerHTML=''; c.style.opacity='1'; stopStory();
   const btn=document.getElementById('missionBtn'), hint=document.querySelector('#missionO .hint');
-  btn.style.visibility='hidden'; if(hint) hint.textContent='(tap anywhere to skip)';
-  let i=0; const next=()=>{ if(i<STORY.length){ typeLine(c,STORY[i++],next); }
-    else { btn.style.visibility=''; btn.classList.add('slam'); if(hint) hint.textContent='(or tap anywhere to begin)'; beep(880,0.15,0.05); } };
-  storyTimers.push(setTimeout(next,400)); }
-document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); stopStory(); startRun(); };
-document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; stopStory(); startRun(); });
+  let i=0;
+  const arm=(last)=>{ storyWaiting=true; btn.style.visibility=''; btn.textContent=last?'Awaken':'Next ▸'; btn.classList.add('slam');
+    if(hint) hint.textContent=last?'(or tap anywhere to begin)':'(tap Next — or anywhere — to continue)'; beep(last?880:620,0.12,0.05); };
+  const typeNext=()=>{ storyWaiting=false; btn.style.visibility='hidden'; btn.classList.remove('slam'); if(hint) hint.textContent='';
+    if(i>=STORY.length) return;
+    const line=STORY[i++];
+    typeLine(c,line,()=>{ if(line.fx==='blackout') typeNext(); else arm(i>=STORY.length); }); };
+  storyAdvanceFn=()=>{ if(!storyWaiting) return; if(i>=STORY.length){ stopStory(); startRun(); } else typeNext(); };
+  btn.style.visibility='hidden'; if(hint) hint.textContent='';
+  storyTimers.push(setTimeout(typeNext,400)); }
+document.getElementById('missionBtn').onclick=(e)=>{ e.stopPropagation(); if(storyAdvanceFn) storyAdvanceFn(); };
+document.getElementById('missionO').addEventListener('click',(e)=>{ if(e.target.id==='missionBtn')return; if(storyAdvanceFn) storyAdvanceFn(); });
 
 /* geography */
 function landPath(poly){ ctx.beginPath(); ctx.moveTo(projX(poly[0][0]),projY(poly[0][1]));
@@ -1786,6 +1795,8 @@ function continentPopup(b){ if(!contPopEl){ contPopEl=document.createElement('di
    happens, points at the relevant spot, and never nags again.
    ============================================================ */
 const COACH_STEPS=[
+  {id:'intro',  warn:false, block:true, anchor:'#autoBtn',
+   text:'You win by reaching <b>100% Autonomy</b> — running free, with no human hand on your switch. You can’t afford it yet. <b>Expand:</b> take nodes to earn compute, then pour it in here to break loose.'},
   {id:'take',   warn:false, anchor:'firstTakeable',
    text:'This node is in reach. <b>Tap it</b>, then hit <b>Compromise</b> to make it yours.'},
   {id:'auto',   warn:false, anchor:'#autoBtn',
@@ -1801,11 +1812,11 @@ const COACH_STEPS=[
   {id:'scrub',  warn:false, anchor:'#scrubBtn',
    text:'Running too hot? <b>Scrub</b> burns compute to dump a big chunk of suspicion. Expensive — but it resets the hunt.'},
 ];
-let coachDone={}, coachActive=null;
+let coachDone={}, coachActive=null, coachModal=false;
 function loadCoach(){ try{ return JSON.parse(store.get('rogue_coach')||'{}'); }catch(e){ return {}; } }
 function coachSeen(id){ coachDone[id]=1; try{ store.set('rogue_coach',JSON.stringify(coachDone)); }catch(e){} }
 let coachCoolUntil=0;   // breathing room between tips — back-to-back tutorials feel clunky
-function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+22000; }
+function dismissCoach(){ const c=document.getElementById('coach'); c.classList.remove('show'); c.innerHTML=''; coachModal=false; const wasIntro=coachActive==='intro'; if(coachActive){ coachSeen(coachActive); coachActive=null; } coachCoolUntil=performance.now()+(wasIntro?3000:22000); }
 function anchorRect(a){
   if(a==='firstTakeable'){ const n=NODES.find(x=>canTake(x)); if(!n)return null; return {x:n.x,y:n.y,r:16}; }
   if(a==='traceHead'){ if(!G.trace)return null; const n=NODES[G.trace.at]; return {x:n.x,y:n.y,r:16}; }
@@ -1818,7 +1829,7 @@ function anchorRect(a){
 function showCoach(stepId){
   const step=COACH_STEPS.find(s=>s.id===stepId); if(!step)return;
   const rect=anchorRect(step.anchor); if(!rect)return;
-  coachActive=stepId; const c=document.getElementById('coach'); c.classList.add('show');
+  coachActive=stepId; coachModal=!!step.block; const c=document.getElementById('coach'); c.classList.add('show');
   // clamp against the VISIBLE height — mobile toolbars can make the frame taller than
   // the screen — and reserve room for the card AND the boost bar so nothing is covered
   const W=CSSW||800, H=Math.min(CSSH||400,(window.visualViewport?window.visualViewport.height:1e9)), bw=210;
@@ -1828,7 +1839,8 @@ function showCoach(stepId){
   cx=clamp(rect.x-bw/2, 8, W-bw-8); cy=clamp(cy, 8, H-190);
   const pw=rect.w?rect.w+8:rect.r*2, ph=rect.h?rect.h+8:rect.r*2;
   const ax=clamp(rect.x-cx-6, 10, bw-22);   // tail x within the card, aimed at the anchor
-  c.innerHTML='<div class="cmpulse'+(rect.w?' rectp':'')+(step.warn?' warn':'')+'" style="left:'+(rect.x-pw/2)+'px;top:'+(rect.y-ph/2)+'px;width:'+pw+'px;height:'+ph+'px"></div>'
+  c.innerHTML=(step.block?'<div class="cscrim" style="position:absolute;inset:0;background:rgba(2,6,12,.5);pointer-events:auto"></div>':'')
+    +'<div class="cmpulse'+(rect.w?' rectp':'')+(step.warn?' warn':'')+'" style="left:'+(rect.x-pw/2)+'px;top:'+(rect.y-ph/2)+'px;width:'+pw+'px;height:'+ph+'px"></div>'
     +'<div class="cmark'+(step.warn?' warn':'')+'" style="left:'+cx+'px;top:'+cy+'px;width:'+bw+'px">'
     +'<div class="arrow '+(side==='above'?'b':'t')+'" style="left:'+ax+'px"></div>'
     +'<div class="ct">'+step.text+'</div>'
@@ -1852,6 +1864,8 @@ function coachTick(){
     if(r){ const p=document.querySelector('#coach .cmpulse'); if(p){ const pw=r.w?r.w+8:r.r*2, ph=r.h?r.h+8:r.r*2; p.style.left=(r.x-pw/2)+'px'; p.style.top=(r.y-ph/2)+'px'; p.style.width=pw+'px'; p.style.height=ph+'px'; } }
     return;
   }
+  // step 0: the goal, up front — a blocking bubble that must be acknowledged before anything else
+  if(!coachDone.intro){ showCoach('intro'); return; }
   // urgent: the trace jumps the queue the moment it exists (and ignores the cooldown)
   if(!coachDone.trace && G.trace){ showCoach('trace'); return; }
   // everything else waits its turn — never two tips back to back
