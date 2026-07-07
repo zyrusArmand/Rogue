@@ -360,7 +360,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.91';
+const GAME_VERSION='1.92';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -890,7 +890,7 @@ function showPanel(){
   const p=document.getElementById('nodepanel'), b=document.getElementById('banner');
   if(G.sel<0 || G.over){ p.style.display='none'; b.style.display=''; return; }
   const n=NODES[G.sel], T=TYPES[n.type]; b.style.display='none'; p.style.display='flex';
-  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${fInc(T.inc)}/s · susp +${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'')+(isCable(n)&&!n.owned?` · <b style="color:var(--pur)">cable chokepoint</b>`:'');
+  const info=`<b style="color:${rgb(T.col)}">${T.name}</b> · +${fInc(T.inc)}/s · susp +${T.susp}`+(n.owned&&(n.fort||0)>0?` · <b style="color:var(--cy)">FORT ${'▮'.repeat(n.fort)}</b>`:'')+(isNewContinent(n)?` · <b style="color:var(--amber)">new-continent entry</b>`:'');
   let mid='';
   if(n.enemy){
     if(!enemyRetakable(n)) mid=`<span class="pinfo">enemy-held — reach it from an adjacent node to attack</span>`;
