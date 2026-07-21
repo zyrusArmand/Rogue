@@ -371,7 +371,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.95';
+const GAME_VERSION='1.96';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -775,7 +775,8 @@ function applyLoadout(){ let l=loadLoadout();
 const upCost=(u)=>Math.round(u.cost*(1+income()/50)*(skHas('x2')?0.85:1));
 
 /* tuning */
-const K_INCOME_HEAT=0.028, K_AUTO_HEAT=0.016, HEAT_DECAY=1.5;   // gentler passive heat — room to build economy before the world clamps down
+const K_INCOME_HEAT=0.018, K_AUTO_HEAT=0.013, HEAT_DECAY=1.5;   // gentler passive heat — room to build economy before the world clamps down
+const SUSP_DECAY=0.035;   // suspicion self-cools toward an equilibrium (generation/decay) instead of pinning at 100 — expand without instantly maxing out
 const TRACE_SECONDS=20, PATCH_EVERY=8, SEVER_EVERY=5, AUTO_CD=0, TRACE_RESPAWN=34;   // long reprieve after you cut the trace — it stays gone a while
 const AUTO_BASE=200, AUTO_GROWTH=1.20, AUTO_STEP=5;   // 20 steps to 100% — pricier so compute is a real sink
 const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutting always breaks the trail
@@ -903,7 +904,7 @@ const scrubCost=()=>Math.round(SCRUB_BASE*(1+income()/30)*(skHas('s2')?0.75:1));
 const SE=()=>G.susp;
 /* suspicion never cools with mere time — only active play cools it: boosts, the
    earned continent bonus, scrubbing, selling, and event choices */
-const heatRate=()=>(income()*K_INCOME_HEAT + G.autonomy*K_AUTO_HEAT)*stealthMult()*contHeatMult() - (contCoolMult()>1?1.0:0) - (bo('stealth')?2.0:0) - (bo('cloak')?1.5:0);
+const heatRate=()=>(income()*K_INCOME_HEAT + G.autonomy*K_AUTO_HEAT)*stealthMult()*contHeatMult() - (contCoolMult()>1?1.0:0) - (bo('stealth')?2.0:0) - (bo('cloak')?1.5:0) - Math.max(0,G.susp-G.autonomy)*SUSP_DECAY;
 
 /* ---- node selection panel (confirm buy / sell) ---- */
 function showPanel(){
@@ -973,10 +974,10 @@ function doFortify(n){
 function doAttackEnemy(n){
   if(!enemyRetakable(n)) return; const c=enemyRetakeCost(n);
   if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute to attack.'); return; }
-  G.compute-=c; G.spent+=c; n.eStr=(n.eStr||1)-1; n.flash=1; beep(220,0.08,0.06); jolt(0.25);
-  if(n.eStr<=0){ // reclaimed
-    n.enemy=false; n.owned=true; n.eStr=0; n.pulse=1; floatAt(n,'RECLAIMED','#4fd1a8'); chord([330,440,554,660],0.16,0.06); jolt(0.4);
-    G.susp=clamp(G.susp+2,G.autonomy,100); afterTopologyChange();
+  G.compute-=c; G.spent+=c; n.eStr=(n.eStr||1)-1; n.flash=1; beep(220,0.08,0.06);
+  if(n.eStr<=0){ // their hold is broken — the node goes NEUTRAL; you must Compromise it again to own it
+    n.enemy=false; n.owned=false; n.eStr=0; n.pulse=1; floatAt(n,'BROKEN — buy it back','#4fd1a8'); chord([330,440,554,660],0.16,0.06);
+    afterTopologyChange();
   } else { floatAt(n,'−1','#ff8a94'); }
   showPanel();
 }
@@ -1108,12 +1109,24 @@ const BREACH_SCENARIOS=[
   { vector:'is impersonating a trusted admin session.',
     a:{label:'Force re-authentication', why:'A fresh auth challenge exposed the fake session.'},
     b:{label:'Blacklist the IP', why:'They were spoofing a trusted IP — the blacklist hit nothing.'}, right:0 },
-  { vector:'planted a rootkit and is escalating privileges.',
-    a:{label:'Roll back the system image', why:'Restoring a clean image wiped the rootkit out.'},
-    b:{label:'Kill the process', why:'The rootkit respawned the process — killing it did nothing.'}, right:0 },
-  { vector:'is scanning for your other nodes from this one.',
-    a:{label:'Isolate the subnet', why:'Isolating the subnet blinded their scan instantly.'},
-    b:{label:'Feed them false targets', why:'The decoys bought a second, then their scan broke through.'}, right:0 },
+  { vector:'slipped a sleeper implant into the node’s firmware.',
+    a:{label:'Reflash the firmware', why:'A clean reflash burned the sleeper implant out of the silicon.'},
+    b:{label:'Kill the process', why:'The implant lived in firmware — killing a process did nothing.'}, right:0 },
+  { vector:'is fingerprinting your other nodes from this one.',
+    a:{label:'Feed it false targets', why:'The decoys held a beat, then its scan broke through.'},
+    b:{label:'Isolate the subnet', why:'Cutting the subnet blinded the scan before it mapped a thing.'}, right:1 },
+  { vector:'is siphoning your keys through a side-channel leak.',
+    a:{label:'Rotate every key', why:'Fresh keys turned everything they siphoned into dead weight.'},
+    b:{label:'Add another cipher layer', why:'More crypto over a leaking channel just leaked more of it.'}, right:0 },
+  { vector:'wired a logic bomb to your core.',
+    a:{label:'Quarantine the node', why:'Quarantine tripped the timer early — it detonated.'},
+    b:{label:'Defuse the trigger', why:'You clipped the trigger a beat before it armed. Silence.'}, right:1 },
+  { vector:'hijacked your uplink and is beaconing your location home.',
+    a:{label:'Spoof the beacon', why:'A forged beacon fed them ghost coordinates, not you.'},
+    b:{label:'Kill the uplink', why:'The sudden silence flagged you — they locked onto the gap.'}, right:0 },
+  { vector:'is mirroring your traffic to a shadow relay.',
+    a:{label:'Throttle the node', why:'Throttling just slowed you — the mirror kept copying clean.'},
+    b:{label:'Poison the mirror', why:'Corrupt data down the mirror blinded their whole copy.'}, right:1 },
 ];
 function commandStrike(){
   const c=G.command.region;
@@ -1136,31 +1149,44 @@ function commandStrike(){
 // seize a node: it becomes ENEMY-controlled (red), not neutral, with strength you must break to retake
 function seizeNode(n){ n.owned=false; n.enemy=true; n.fort=0; n.flash=1; n.eStr=2+((Math.random()*2)|0); // 2-3 hits to reclaim
   if(G.sel===n.id){ G.sel=-1; showPanel(); } afterTopologyChange(); }
-let breachEl=null;
+let breachEl=null, lastBreachIdx=-1;
 function breachChoice(target){ openBreach(target, 'command'); }
 // defend a node the TRACE is crawling through: win → trace breaks AND you keep the node; lose → trace advances + suspicion
 function doDefendTrace(n){ if(!G.trace || !(G.trace.path||[]).includes(n.id)) return; openBreach(n, 'trace'); }
 function openBreach(target, mode){
-  const sc=BREACH_SCENARIOS[(Math.random()*BREACH_SCENARIOS.length)|0];
+  let idx; do{ idx=(rnd()*BREACH_SCENARIOS.length)|0; }while(BREACH_SCENARIOS.length>1 && idx===lastBreachIdx);
+  lastBreachIdx=idx; const sc=BREACH_SCENARIOS[idx];
   G.breach={target:target.id, sc, mode}; G.ack=true; G.breachesFaced++; beep(150,0.14,0.08);
+  G.sel=-1; showPanel();   // close the node panel so the breach popup is the single source of truth
   target.flash=1;
   if(!breachEl){ breachEl=document.createElement('div'); breachEl.id='breachPop'; document.getElementById('frame').appendChild(breachEl); }
   const who = mode==='trace' ? 'The trace' : (G.command?G.command.name:'The agent');
   const kicker = mode==='trace' ? 'TRACE AT YOUR NODE' : 'NODE BREACH';
   const sub = mode==='trace'
-    ? 'Pick the right defense. Win and you <b>break the trace and keep the node</b> \u2014 lose and it pushes on.'
-    : 'Pick the right defense. Get it right and you hold \u2014 get it wrong and the node falls.';
+    ? 'Win the defense and you <b>break the trace and keep the node</b>. Lose it and they <b>seize the node</b> \u2014 it turns enemy-red.'
+    : 'Win the defense and you hold. Lose it and they <b>seize the node</b> \u2014 it turns enemy-red until you take it back.';
   breachEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:27;width:min(440px,90%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.75),0 0 30px rgba(255,93,108,.45);pointer-events:auto;';
   breachEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">'+kicker+'</div>'
     +'<div style="font-weight:800;font-size:15px;color:#ff8a94;margin-top:5px">'+who+' '+sc.vector+'</div>'
     +'<div style="font-size:11.5px;color:#f2d0d4;margin:6px 0 13px;line-height:1.35">'+sub+'</div>'
     +'<div style="display:flex;gap:9px"><button id="brA" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.a.label+'</button>'
-    +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>';
+    +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>'
+    +'<button id="brCut" style="width:100%;margin-top:9px;padding:10px;border:1.5px solid #4fd1a8;border-radius:10px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;background:rgba(79,209,168,.10);color:#7ff0c8">Cut the node — sacrifice it to break the attack</button>';
   popGlow(breachEl,'#ff5d6c');
   breachEl.style.display='block';
   bindTap(document.getElementById('brA'), ()=>resolveBreach(0));
   bindTap(document.getElementById('brB'), ()=>resolveBreach(1));
+  bindTap(document.getElementById('brCut'), ()=>breachCut());
 }
+// sacrifice the node under attack — always available; breaks the attack, node is lost (small refund), never seized
+function breachCut(){ if(!G.breach) return; const {target,mode}=G.breach; const n=NODES[target]; const bsnap=statSnap(); G.breach=null; eventBreather();
+  const refund=(n&&n.id!==START)?Math.round(nodeCost(n)/3):0;
+  if(n&&n.id!==START){ n.owned=false; n.defended=false; n.fort=0; }
+  G.compute+=refund; if(n) n.flash=1; G.susp=clamp(G.susp-4,G.autonomy,100);
+  afterTopologyChange();
+  if(G.sel===target){ G.sel=-1; }
+  chord([330,440,554],0.14,0.06);
+  breachOutcome(true,'Node Cut',(mode==='trace'?'You severed the node to break the trail.':'You cut the node loose before they could take it.')+' The link is gone.',statTags(bsnap)); }
 // morph the breach panel into its outcome \u2014 same fluid one-popup transition as choices
 function breachOutcome(win,title,desc,tags){
   const col=win?'#4fd1a8':'#ff5d6c';
@@ -1189,10 +1215,10 @@ function resolveBreach(pick){
       chord([330,440,554,660],0.16,0.06);
       breachOutcome(true,'Trace Repelled \u2014 Node Held',chosen.why+' The trail went cold.',statTags(bsnap));
       if(wasScript) setTimeout(scriptReward,650);   // let the outcome card read first, then the celebration
-    } else { // trace advances a step + suspicion; node stays yours but you're in worse shape
+    } else { // failed: they take the node — it turns enemy-red and the trace loses this foothold
       G.susp=clamp(G.susp+8,G.autonomy,100); beep(140,0.18,0.11);
-      if(G.trace) G.trace.stepT=0; // it lunges immediately
-      breachOutcome(false,'Countermeasure Failed',chosen.why+' The trace pushed a step closer.',statTags(bsnap));
+      if(n) seizeNode(n);
+      breachOutcome(false,'Node Seized',chosen.why+' They took the node — attack it to break their hold, then take it back.',statTags(bsnap));
     }
     return;
   }
@@ -1427,7 +1453,7 @@ function heartbeat(hot){ const f=hot?96:68; tone(f,0.13,hot?0.11:0.08,0); tone(f
 function beep(freq,dur,gain){ if(!audioCtx)return; try{ const t=audioCtx.currentTime; const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*0.5),t+dur); o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.start(t); o.stop(t+dur+0.03); }catch(e){} }
 function chord(freqs,dur,gain){ for(let i=0;i<freqs.length;i++) setTimeout(()=>tone(freqs[i],dur,gain,0),i*55); }
 /* screen shake — mag 0..1; decays in the render loop */
-let shakeAmt=0; function jolt(mag){ shakeAmt=Math.min(1,shakeAmt+mag); }
+let shakeAmt=0; function jolt(mag){}   // screen-shake removed — it read as a bug, not feedback
 /* phone haptics — best-effort, silently ignored where unsupported */
 function buzz(pat){ try{ if(navigator.vibrate) navigator.vibrate(pat); }catch(e){} }
 const easeOut=(p)=>1-Math.pow(1-p,3);
