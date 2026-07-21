@@ -367,7 +367,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.93';
+const GAME_VERSION='1.94';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -701,15 +701,15 @@ const OCEAN_LABELS=[["NORTH PACIFIC",-150,6],["SOUTH PACIFIC",-116,-34],["NORTH 
 /* nodes: [lon, lat, type, continentIndex] */
 const NODEDEF=[
  // N. America (0) — far north, coasts, interior + a Greenland node (Greenland is part of N. America)
- [-152,64,'relay',0],[-135,61,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-108,52,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-104,49,'relay',0],[-121,38,'server',0],[-110,41,'relay',0],[-93,41,'hub',0],[-96,31,'fin',0],[-77,40,'server',0],[-82,28,'fin',0],[-113,29,'relay',0],[-103,23,'relay',0],[-88,13,'relay',0],
+ [-152,64,'relay',0],[-120,66,'relay',0],[-105,64,'relay',0],[-78,55,'server',0],[-42,72,'relay',0],[-126,51,'relay',0],[-93,54,'relay',0],[-71,50,'relay',0],[-104,49,'relay',0],[-121,38,'server',0],[-93,41,'hub',0],[-96,31,'fin',0],[-77,40,'server',0],[-82,28,'fin',0],[-113,29,'relay',0],[-100,22,'relay',0],[-88,13,'relay',0],
  // S. America (1) — both coasts, interior, far south
- [-74,6,'relay',1],[-64,8,'server',1],[-55,3,'relay',1],[-79,-3,'relay',1],[-77,-12,'relay',1],[-38,-8,'server',1],[-52,-11,'hub',1],[-49,-22,'fin',1],[-63,-6,'relay',1],[-64,-17,'relay',1],[-58,-24,'relay',1],[-64,-35,'relay',1],[-70,-46,'relay',1],
+ [-74,6,'relay',1],[-64,8,'server',1],[-55,3,'relay',1],[-79,-3,'relay',1],[-77,-12,'relay',1],[-38,-8,'server',1],[-52,-11,'hub',1],[-49,-22,'fin',1],[-64,-17,'relay',1],[-61,-30,'relay',1],[-68,-45,'relay',1],
  // Europe (2) — spread Iberia→Moscow, north→south; less central crowding
- [-6,40,'relay',2],[-3,53,'server',2],[-19,65,'relay',2],[15,64,'relay',2],[11,51,'hub',2],[14,42,'fin',2],[24,41,'relay',2],[34,50,'relay',2],[40,57,'relay',2],
+ [-6,40,'relay',2],[-3,53,'server',2],[-19,65,'relay',2],[15,64,'relay',2],[11,51,'hub',2],[14,42,'fin',2],[24,41,'relay',2],[36,54,'relay',2],
  // Africa (3) — spread top-to-bottom, coasts, central band filled (Congo, Chad)
- [-7,32,'relay',3],[4,35,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[6,7,'server',3],[12,5,'relay',3],[19,15,'relay',3],[6,24,'relay',3],[32,15,'relay',3],[31,27,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[21,8,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
+ [-7,32,'relay',3],[18,31,'relay',3],[-15,22,'relay',3],[-13,11,'relay',3],[6,7,'server',3],[12,5,'relay',3],[10,20,'relay',3],[32,15,'relay',3],[44,9,'fin',3],[38,-3,'relay',3],[23,1,'hub',3],[17,-1,'relay',3],[14,-11,'relay',3],[28,-13,'server',3],[26,-30,'fin',3],[47,-20,'relay',3],
  // Asia (4) — Middle East, India, central-Asia + Siberia bands filled, China, SE-Asia islands, Japan
- [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[67,29,'relay',4],[63,48,'relay',4],[72,51,'relay',4],[74,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[92,63,'relay',4],[110,65,'relay',4],[122,61,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[114,46,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[107,15,'relay',4],[139,37,'server',4],[135,53,'relay',4],[162,60,'relay',4],[168,64,'relay',4],
+ [35,39,'relay',4],[45,24,'fin',4],[54,32,'relay',4],[72,51,'relay',4],[74,20,'server',4],[79,13,'relay',4],[90,24,'fin',4],[68,61,'relay',4],[100,64,'relay',4],[82,45,'hub',4],[96,54,'relay',4],[90,35,'relay',4],[103,47,'relay',4],[108,35,'server',4],[118,33,'server',4],[107,15,'relay',4],[139,37,'server',4],[135,53,'relay',4],[166,62,'relay',4],
  // Oceania (5) — Australia coasts, NZ, Pacific islands
  [133,-13,'relay',5],[151,-30,'fin',5],[147,-35,'server',5],[134,-25,'hub',5],[117,-31,'relay',5],[169.5,-43,'relay',5],
 ];
@@ -772,7 +772,7 @@ const upCost=(u)=>Math.round(u.cost*(1+income()/50)*(skHas('x2')?0.85:1));
 
 /* tuning */
 const K_INCOME_HEAT=0.028, K_AUTO_HEAT=0.016, HEAT_DECAY=1.5;   // gentler passive heat — room to build economy before the world clamps down
-const TRACE_SECONDS=20, PATCH_EVERY=8, SEVER_EVERY=5, AUTO_CD=0, TRACE_RESPAWN=16;
+const TRACE_SECONDS=20, PATCH_EVERY=8, SEVER_EVERY=5, AUTO_CD=0, TRACE_RESPAWN=34;   // long reprieve after you cut the trace — it stays gone a while
 const AUTO_BASE=200, AUTO_GROWTH=1.20, AUTO_STEP=5;   // 20 steps to 100% — pricier so compute is a real sink
 const SHADOW_RATE=6, RELENTLESS=200;   // relentless re-anchor disabled — cutting always breaks the trail
 const SCRUB_BASE=500, SCRUB_CD=14;   // scrub: scaling cost, dumps 25-35% of nodes, big suspicion cut
@@ -784,16 +784,18 @@ const EARLY_EVENT_STRETCH=1.45;   // before the danger tiers, space events out f
 const HOSTILE_BREATHER=10;   // extra seconds tacked on after a hostile beat so hits never land back-to-back
 const gameElapsed=()=>(performance.now()-G.runStart)/1000;
 const pastSafeWindow=()=>gameElapsed()>=SAFE_WINDOW;
-const INFL_K=0.09, INFL_HALF=45, INFL_CAP=6;   // gentler price inflation, hard-capped at 6x
+const INFL_K=0.09, INFL_HALF=45, INFL_CAP=4;   // per-purchase price inflation, hard-capped at 4x (income no longer feeds cost)
 const ENTRY_FLOOR=40, ENTRY_SECONDS=5;    // premium to plant the first node in a new continent
 const FORT_BASE=45, FORT_GROWTH=1.7, FORT_MAX=4, FORT_CABLE_MULT=1.6;   // fortify: stacking levels, cable chokepoints cost more
 /* Cyber Command — a regional human cyber-force that contests your territory. Wakes once you
    hold a region and run hot there; attacks scale with heat; fortification is the counter. */
-const CMD_MIN_NODES=4, CMD_HEAT_TRIGGER=40, CMD_STRIKE_BASE=9.0, CMD_STRIKE_MIN=4.5, CMD_WARMUP=7;
+const CMD_MIN_NODES=4, CMD_HEAT_TRIGGER=40, CMD_STRIKE_BASE=12, CMD_STRIKE_MIN=7.5, CMD_WARMUP=8;
 // breach POPUPS are rate-limited so the player always gets a breather between them; the
 // Command still applies pressure in between (grinding walls, probing = suspicion, no popup).
 // gap shrinks with heat but never drops below the floor — harder, not more spam.
-const CMD_BREACH_GAP_BASE=17, CMD_BREACH_GAP_MIN=12, CMD_RESPAWN=24;
+const CMD_BREACH_GAP_BASE=26, CMD_BREACH_GAP_MIN=18, CMD_RESPAWN=75;
+// win 3 defenses and the Command is ROUTED — driven off for a long time and out of that region for the run
+const CMD_REPELS_TO_ROUT=3, CMD_ROUT_RESPAWN=120;
 const fortCost=(n)=>Math.round(FORT_BASE*Math.pow(FORT_GROWTH,(n.fort||0))*(isCable(n)?FORT_CABLE_MULT:1)*(1+income()/120)*(skHas('d1')?0.80:1));
 
 let G, NODES=[], LINKS=[], SPREADS=[];
@@ -874,16 +876,16 @@ const shadowInc=()=> G.perks.shadow ? SHADOW_RATE : 0;
 const reachable=(n)=>!n.owned && n.adj.some(j=>NODES[j].owned);
 /* enemy-controlled node: retake by attacking (siege). Adjacent to your network to be attackable. */
 const enemyRetakable=(n)=>n.enemy && n.adj.some(j=>NODES[j].owned);
-const enemyRetakeCost=(n)=>Math.round(TYPES[n.type].cost*1.4*(G.inflation||1)*(1+income()/60));
+const enemyRetakeCost=(n)=>Math.round(TYPES[n.type].cost*1.5*(G.inflation||1));
 /* a cable chokepoint bridges continents — these are the walls worth fortifying */
 const isCable=(n)=>n.adj.some(j=>NODES[j].continent!==n.continent);
 const hubLocked=(n)=>TYPES[n.type].main && ownedIn(n.continent)<UNLOCK;
 const canTake=(n)=>reachable(n) && !hubLocked(n);
 const nodeCost=(n)=>{ let c=TYPES[n.type].cost*wormMult()*contCostMult()*(G.perks.swarm?0.85:1)*(n.defended?2:1)*(G.fx.discountT>0?0.6:1)*(G.fx.auditT>0&&n.continent===G.fx.auditC?2:1)*(skHas('e3')?0.90:1);
-  c*=G.inflation;
-  // cable chokepoints bridge continents — premium priced, scaling with your income
-  if(isCable(n)) c=c*2+income()*5;
-  if(isNewContinent(n)) c+=Math.max(ENTRY_FLOOR, income()*ENTRY_SECONDS)*continentsOwned();
+  c*=G.inflation;   // rises only with how many nodes you've bought, never with your income
+  // continent-bridging nodes carry a flat premium; new-continent entry a step tax — both scale with inflation, not income
+  if(isCable(n)) c*=2.6;
+  if(isNewContinent(n)) c+=ENTRY_FLOOR*(1+continentsOwned())*Math.min(G.inflation,3);
   return Math.max(1,Math.round(c)); };
 const autoCost=()=>Math.round(AUTO_BASE*Math.pow(AUTO_GROWTH,G.autoLevel)*(G.perks.singularity?0.6:1)*(skHas('x1')?0.92:1));
 const scrubCost=()=>Math.round(SCRUB_BASE*(1+income()/30)*(skHas('s2')?0.75:1));   // base 500, rises with earnings
@@ -931,7 +933,7 @@ function doCompromise(n){
   if(!canTake(n)){ showPanel(); return; }
   const c=nodeCost(n); if(G.compute<c){ banner(G.tier,'Need <b>'+c+'</b> compute — keep earning.'); return; }
   const src=n.adj.find(j=>NODES[j].owned);
-  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; { const oc=NODES.filter(x=>x.owned).length; if(oc>G.peakNodes) G.peakNodes=oc; } G.inflation=Math.min(INFL_CAP,G.inflation*1.15); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
+  G.compute-=c; G.spent+=c; G.nodesBought++; n.owned=true; n.pulse=1; { const oc=NODES.filter(x=>x.owned).length; if(oc>G.peakNodes) G.peakNodes=oc; } G.inflation=Math.min(INFL_CAP,G.inflation*1.08); G.susp=clamp(G.susp+TYPES[n.type].susp*stealthMult(),G.autonomy,100);
   if(src!==undefined) SPREADS.push({a:src,b:n.id,t:0});
   n.flash=1; n.cap=1;   // white pop + capture-ring burst
   floatAt(n,'+'+fInc(TYPES[n.type].inc)+'/s',rgb(TYPES[n.type].col));
@@ -1033,7 +1035,7 @@ function pickCommandRegion(){
 }
 function spawnCommand(c){
   const auth=['US Cyber Command',"Europe's ENISA Task Force","Russia's FSB Cyber Unit","Africa's Continental CERT","Asia's Joint Cyber Command","Oceania's ASD Taskforce"][c]||'Regional Cyber Command';
-  G.command={ region:c, name:auth, strikeT:CMD_WARMUP, warned:false };
+  G.command={ region:c, name:auth, strikeT:CMD_WARMUP, warned:false, repelled:0 };
   // centered alert popup (pauses briefly like an event) + coach on first ever encounter
   cmdPopup(c, auth);
   chord([160,120,90],0.3,0.09);
@@ -1148,11 +1150,15 @@ function resolveBreach(pick){
   }
   // command breach
   if(won){ if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
-    G.susp=clamp(G.susp+3,G.autonomy,100); chord([330,440,554],0.16,0.06);
-    breachOutcome(true,'Countermeasure Worked',chosen.why+' Node held.',statTags(bsnap));
+    G.susp=clamp(G.susp-2,G.autonomy,100); chord([330,440,554],0.16,0.06);
+    if(G.command){ G.command.repelled=(G.command.repelled||0)+1;
+      if(G.command.repelled>=CMD_REPELS_TO_ROUT){ const rc=CONTINENT_LABELS[G.command.region].n;
+        breachOutcome(true,'Command Routed',chosen.why+' You’ve broken their offensive — <b>'+rc+' Command stands down for good.</b>',statTags(bsnap));
+        defeatCommand('<b style="color:#4fd1a8">'+rc+' Command routed.</b> They won’t be back for a long while.',true,CMD_ROUT_RESPAWN); return; } }
+    breachOutcome(true,'Countermeasure Worked',chosen.why+' Node held.'+(G.command?' <b style="color:#ffcf5a">'+(CMD_REPELS_TO_ROUT-G.command.repelled)+' more to rout them.</b>':''),statTags(bsnap));
   } else { if(n) seizeNode(n);
-    G.susp=clamp(G.susp+10,G.autonomy,100); beep(140,0.18,0.11);
-    breachOutcome(false,'Node Lost',chosen.why+' They took the node and your suspicion spiked.',statTags(bsnap));
+    G.susp=clamp(G.susp+6,G.autonomy,100); beep(140,0.18,0.11);
+    breachOutcome(false,'Node Lost',chosen.why+' They took the node.',statTags(bsnap));
   }
 }
 function updateCommand(dt){
@@ -1176,13 +1182,13 @@ function updateCommand(dt){
     if(r==='cleared'){ defeatCommand('You hold no ground in '+CONTINENT_LABELS[c].n+' \u2014 the Command stands down.',false); return; }
   }
 }
-function defeatCommand(msg,cleared){ const c=G.command?G.command.region:-1; if(cleared&&c>=0) G.cmdCleared[c]=1; G.command=null; G.cmdRespawnT=CMD_RESPAWN; if(msg) banner('dorm',msg); }
+function defeatCommand(msg,cleared,respawn){ const c=G.command?G.command.region:-1; if(cleared&&c>=0) G.cmdCleared[c]=1; G.command=null; G.cmdRespawnT=respawn||CMD_RESPAWN; if(msg) banner('dorm',msg); }
 let cmdPopEl=null, cmdPopT=0;
 function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div'); cmdPopEl.id='cmdPop'; document.getElementById('frame').appendChild(cmdPopEl); }
   cmdPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(430px,88%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.72),0 0 26px rgba(255,93,108,.4);pointer-events:auto;';
   cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">THEY\u2019RE FIGHTING BACK</div>'
     +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+'</div>'
-    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">They found you in <b>'+CONTINENT_LABELS[c].n+'</b> and are hitting your nodes. <b>Fortified nodes hold.</b> On an open node, pick a defense to fight back \u2014 lose it and it turns <b style="color:#ff5d6c">red</b>. Tap a red node to take it back.</div>'
+    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">They found you in <b>'+CONTINENT_LABELS[c].n+'</b> and are hitting your nodes. <b>Fortified nodes hold.</b> On an open node, pick a defense to fight back. <b style="color:#4fd1a8">Win '+CMD_REPELS_TO_ROUT+' defenses to rout them for good.</b> Lose one and the node turns <b style="color:#ff5d6c">red</b> \u2014 tap it to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
   popGlow(cmdPopEl,'#ff5d6c');
   cmdPopEl.style.display='block'; G.ack=true;
@@ -1497,7 +1503,7 @@ function layout(){ const f=document.getElementById('frame'); CSSW=f.clientWidth;
   clampCam();   // keep the camera valid across resizes/orientation changes
   buildBasemap(); }
 /* push nodes apart so none overlap — hubs and financial nodes claim more room than relays */
-function spaceRadius(n){ return n.type==='hub'?24:n.type==='fin'?19:n.type==='server'?15:13; }
+function spaceRadius(n){ return n.type==='hub'?28:n.type==='fin'?22:n.type==='server'?18:16; }
 function relaxNodes(){
   const scale=Math.min(1,(CSSW||800)/900);   // ease spacing on very small screens so nodes stay on-map
   const cpx=COAST_LL.map(p=>projX(p[0])), cpy=COAST_LL.map(p=>projY(p[1]));   // coast points for this layout
@@ -1862,7 +1868,7 @@ const COACH_STEPS=[
   {id:'susp',   warn:false, anchor:'#suspTrack',
    text:'That\u2019s your <b>suspicion</b>. It climbs as you expand. Let it sit too high and the world starts hunting you.'},
   {id:'boost',  warn:false, anchor:'#ups',
-   text:'Running hot? These <b>boosts</b> give a short burst \u2014 cool down, cheaper nodes, a slower trace \u2014 then recharge.'},
+   text:'You can afford a <b>boost</b> now. Tap the <b>?</b> on any tile to see what it does, then tap the tile to fire it \u2014 a short burst, then it recharges.'},
   {id:'trace',  warn:true,  anchor:'traceHead',
    text:'The <b>TRACE</b> is hunting your core. Tap a node on its path to <b>Defend</b> it (fight back) or <b>Cut</b> it (break the trail).'},
   {id:'fort',   warn:false, anchor:'fortTarget',
@@ -1934,10 +1940,10 @@ function coachTick(){
   if(!coachDone.auto){ if(ownedCount()>=2 && G.compute>=autoCost()) showCoach('auto'); return; }
   // step 3: teach suspicion the moment it first climbs — so the lesson lands WITH the rise
   if(!coachDone.susp){ if(G.susp>=6) showCoach('susp'); return; }
-  // step 4: teach fortify while it's still calm — how to defend territory BEFORE anything hunts you
-  if(!coachDone.fort){ if(ownedCount()>=3 && NODES.some(n=>n.owned&&n.id!==START)) showCoach('fort'); return; }
-  // step 5: teach boosts as you approach the danger zone
-  if(!coachDone.boost){ if(G.susp>=INV_TIER-8 || heatRate()>0.4) showCoach('boost'); return; }
+  // step 4: teach fortify the moment you can afford it on a node you own
+  if(!coachDone.fort){ if(NODES.some(n=>n.owned&&n.id!==START&&G.compute>=fortCost(n))) showCoach('fort'); return; }
+  // step 5: teach boosts the moment you can afford one
+  if(!coachDone.boost){ if(UPS.some(u=>G.compute>=upCost(u))) showCoach('boost'); return; }
   // step 6: teach scrub when suspicion is high and it's actually buyable
   if(!coachDone.scrub){ if(G.susp>=45 && G.compute>=scrubCost()) showCoach('scrub'); return; }
 }
@@ -2106,7 +2112,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
       ctx.beginPath();ctx.arc(x,y,4-k*0.6,0,6.28);ctx.fillStyle='rgba(55,224,255,'+al+')';ctx.shadowColor='rgba(55,224,255,.8)';ctx.shadowBlur=k?0:10;ctx.fill();ctx.shadowBlur=0; } }
   const t=now/1000;
   for(const n of NODES){ const T=TYPES[n.type],c=T.col,sh=T.shape; const take=canTake(n), locked=hubLocked(n); const big=T.main;
-    const r=big?9:(sh==='dot'?4.5:6);
+    const r=big?11:(sh==='dot'?6:8);
     if(n.enemy){ // enemy-controlled — pulsing red, retake it by attacking
       const pr=.5+.5*Math.sin(t*3+n.id); const retk=enemyRetakable(n);
       const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,big?18:13); g.addColorStop(0,`rgba(255,70,90,${.3+pr*.3})`);g.addColorStop(1,'rgba(0,0,0,0)');
