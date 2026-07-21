@@ -371,7 +371,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.96';
+const GAME_VERSION='1.97';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1170,23 +1170,12 @@ function openBreach(target, mode){
     +'<div style="font-weight:800;font-size:15px;color:#ff8a94;margin-top:5px">'+who+' '+sc.vector+'</div>'
     +'<div style="font-size:11.5px;color:#f2d0d4;margin:6px 0 13px;line-height:1.35">'+sub+'</div>'
     +'<div style="display:flex;gap:9px"><button id="brA" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.a.label+'</button>'
-    +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>'
-    +'<button id="brCut" style="width:100%;margin-top:9px;padding:10px;border:1.5px solid #4fd1a8;border-radius:10px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;background:rgba(79,209,168,.10);color:#7ff0c8">Cut the node — sacrifice it to break the attack</button>';
+    +'<button id="brB" style="flex:1;padding:12px 8px;border:1.5px solid #ff5d6c;border-radius:10px;font:inherit;font-weight:800;font-size:12.5px;cursor:pointer;background:rgba(255,93,108,.12);color:#ffd0d5">'+sc.b.label+'</button></div>';
   popGlow(breachEl,'#ff5d6c');
   breachEl.style.display='block';
   bindTap(document.getElementById('brA'), ()=>resolveBreach(0));
   bindTap(document.getElementById('brB'), ()=>resolveBreach(1));
-  bindTap(document.getElementById('brCut'), ()=>breachCut());
 }
-// sacrifice the node under attack — always available; breaks the attack, node is lost (small refund), never seized
-function breachCut(){ if(!G.breach) return; const {target,mode}=G.breach; const n=NODES[target]; const bsnap=statSnap(); G.breach=null; eventBreather();
-  const refund=(n&&n.id!==START)?Math.round(nodeCost(n)/3):0;
-  if(n&&n.id!==START){ n.owned=false; n.defended=false; n.fort=0; }
-  G.compute+=refund; if(n) n.flash=1; G.susp=clamp(G.susp-4,G.autonomy,100);
-  afterTopologyChange();
-  if(G.sel===target){ G.sel=-1; }
-  chord([330,440,554],0.14,0.06);
-  breachOutcome(true,'Node Cut',(mode==='trace'?'You severed the node to break the trail.':'You cut the node loose before they could take it.')+' The link is gone.',statTags(bsnap)); }
 // morph the breach panel into its outcome \u2014 same fluid one-popup transition as choices
 function breachOutcome(win,title,desc,tags){
   const col=win?'#4fd1a8':'#ff5d6c';
