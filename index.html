@@ -240,6 +240,10 @@
   .hudbtn.arm{width:auto;padding:0 8px;font-size:9px;letter-spacing:.08em;color:var(--red);border-color:rgba(255,93,108,.6);}
   #zoomctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:15;pointer-events:auto;}
   #zoomctl .hudbtn{width:34px;height:34px;font-size:19px;background:rgba(9,15,25,.8);}
+  #invGauge{position:absolute;left:50%;top:56px;transform:translateX(-50%);z-index:12;display:none;align-items:center;gap:7px;padding:3px 11px;border-radius:20px;background:rgba(20,12,6,.78);border:1px solid rgba(255,179,71,.4);pointer-events:none;}
+  #invGauge .il{font-size:8px;letter-spacing:.16em;color:var(--amber);font-weight:800;}
+  #invGauge .it{width:88px;height:5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;}
+  #invGauge .if{height:100%;width:0;background:linear-gradient(90deg,#ffcf5a,#ff8a5c);transition:width .25s;}
 </style>
 </head>
 <body>
@@ -268,6 +272,8 @@
     <button class="hudbtn" id="zoomIn" title="Zoom in">+</button>
     <button class="hudbtn" id="zoomOut" title="Zoom out">−</button>
   </div>
+
+  <div id="invGauge"><span class="il">INVESTIGATION</span><div class="it"><div class="if" id="invFillBar"></div></div></div>
 
   <div id="banner" class="dorm" style="display:none"></div>
   <div id="nodepanel"></div>
@@ -371,7 +377,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.97';
+const GAME_VERSION='1.98';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -801,6 +807,12 @@ const CMD_MIN_NODES=4, CMD_HEAT_TRIGGER=40, CMD_STRIKE_BASE=12, CMD_STRIKE_MIN=7
 const CMD_BREACH_GAP_BASE=26, CMD_BREACH_GAP_MIN=18, CMD_RESPAWN=75;
 // win 3 defenses and the Command is ROUTED — driven off for a long time and out of that region for the run
 const CMD_REPELS_TO_ROUT=3, CMD_ROUT_RESPAWN=120;
+// ESCALATION LADDER — the trace is a field AGENT the unit sends first. Every encounter feeds an
+// INVESTIGATION: a clean kill adds a little, a breach spikes it. Fill it and the full Cyber Command
+// mobilizes (phase 2). Go quiet (below the trace tier) and it cools — skilled ghosts stay in phase 1.
+const INV_KILL=13, INV_BREACH=38, INV_MAX=100, INV_DECAY=0.7;
+const agentStoryShown=()=>{ try{ return store.get('rogue_agentstory')==='1'; }catch(e){ return true; } };
+const markAgentStory=()=>{ try{ store.set('rogue_agentstory','1'); }catch(e){} };
 // FIRST-RUN scripted close call — one guaranteed, survivable trace ~2.5min into a brand-new player's first game
 const SCRIPT_AT=150, SCRIPT_MIN_NODES=4, SCRIPT_GRACE=5.5, SCRIPT_SALVAGE=60;
 const firstScriptDone=()=>{ try{ return store.get('rogue_firstscript')==='1'; }catch(e){ return true; } };
@@ -822,11 +834,11 @@ function newGame(){
      trace:null, traceCD:0, choice:null, hbT:0, bannerT:0, perks:{}, techDone:{}, techPick:null, redundancy:skHas('d3')?1:0, patchT:PATCH_EVERY, autoCd:0, scrubCd:0, over:false, inflation:1,
      evT:EVENT_FIRST, fx:{discountT:0,surgeT:0,freezeT:0,auditT:0,auditC:-1,calmT:0,dampT:0},
      closeCalls:0, peakAuto:skHas('apex')?5:0, runStart:performance.now(), contHeld:{}, ack:false, command:null, cmdCleared:{}, breach:null,
-     daily:daily, scriptActive:false, scriptFired:false,
+     daily:daily, scriptActive:false, scriptFired:false, investigation:0,
      spent:0, nodesBought:0,
      // per-run analytics counters — rolled into lifetime stats at endGame
      peakNodes:1, hitTrace:false, hitInv:false, breachesFaced:0, breachesWon:0, boostsUsed:0, scrubsUsed:0, fortifies:0, contRunHolds:0};
-  firedThisGame=new Set(); recentUsed=daily?[]:loadRecent(); if(scriptPopEl)scriptPopEl.style.display='none'; if(choiceEl)choiceEl.style.display='none'; if(toastEl)toastEl.style.display='none'; if(contPopEl)contPopEl.style.display='none'; if(cmdPopEl)cmdPopEl.style.display='none'; if(breachEl)breachEl.style.display='none'; if(techEl)techEl.style.display='none'; shakeAmt=0;
+  firedThisGame=new Set(); recentUsed=daily?[]:loadRecent(); if(scriptPopEl)scriptPopEl.style.display='none'; if(agentPopEl)agentPopEl.style.display='none'; if(choiceEl)choiceEl.style.display='none'; if(toastEl)toastEl.style.display='none'; if(contPopEl)contPopEl.style.display='none'; if(cmdPopEl)cmdPopEl.style.display='none'; if(breachEl)breachEl.style.display='none'; if(techEl)techEl.style.display='none'; shakeAmt=0;
   coachDone=loadCoach(); coachActive=null; { const c=document.getElementById('coach'); if(c){ c.classList.remove('show'); c.innerHTML=''; } }
   SPREADS=[]; dispCompute=G.compute; resetCam();
   layout(); { const bn=document.getElementById('banner'); bn.className='dorm'; bn.innerHTML=''; bn.style.opacity='0'; G.bannerT=0; } showPanel();
@@ -961,6 +973,7 @@ function doSell(n){
   floatAt(n,'+'+refund,'#4fd1a8'); G.sel=-1; showPanel();
   afterTopologyChange();
   if(wasScript && !G.trace){ scriptReward(); }
+  if(wasPath && !G.trace){ raiseInvestigation(INV_KILL); floatAt(n,'AGENT DARK · case +'+INV_KILL,'#ffcf5a'); }
   if(wasPath){ if(coachActive==='trace') dismissCoach(); G.susp=clamp(G.susp-8,G.autonomy,100); G.closeCalls=(G.closeCalls||0)+1; jolt(0.6); chord([330,440,554,660],0.16,0.06); floatAt(n,'CUT!','#4fd1a8'); banner('trace', G.trace?'<b style="color:#4fd1a8">Path cut \u2014 the trace has to re-route.</b> Suspicion eased.':'<b style="color:#4fd1a8">Trail broken \u2014 the trace lost you.</b> You have a window before it can pick you up again.'); }
   else { beep(360,0.06,0.04); }
 }
@@ -1024,6 +1037,8 @@ function traceEntryNode(){ const dist={}; dist[START]=0; let q=[START],far=START
   while(q.length){ const nq=[]; for(const u of q){ for(const v of NODES[u].adj){ if(NODES[v].owned && dist[v]===undefined){ dist[v]=dist[u]+1; if(dist[v]>fd){fd=dist[v];far=v;} nq.push(v); } } } q=nq; }
   return far; }
 function spawnTrace(){ const e=traceEntryNode(); G.trace={at:e, path:bfsToCore(e)||[e], stepT:TRACE_HOP*ghostMult()*skTraceMult(), burned:{}, speedMult:1}; }
+// every agent encounter builds the unit's case; while the full Command is already deployed the case is moot
+function raiseInvestigation(amt){ if(G.command) return; G.investigation=Math.min(INV_MAX,(G.investigation||0)+amt); }
 /* One guaranteed, survivable trace for a brand-new player's first game — the hook that sells run two.
    Fires once ever, never on dailies, and steps aside if a real trace already happened. */
 function maybeScriptTrace(){
@@ -1033,7 +1048,7 @@ function maybeScriptTrace(){
   if(gameElapsed()>=SCRIPT_AT && ownedCount()>=SCRIPT_MIN_NODES && pastSafeWindow()){
     const e=traceEntryNode();
     G.trace={at:e, path:bfsToCore(e)||[e], stepT:TRACE_HOP*1.25*ghostMult()*skTraceMult(), burned:{}, speedMult:1, scripted:true, stumbled:false};
-    G.scriptActive=true; G.scriptFired=true; markFirstScript();   // once ever
+    G.scriptActive=true; G.scriptFired=true; markFirstScript(); markAgentStory();   // once ever; the scripted callout doubles as the agent story
     scriptTracePopup();
   }
 }
@@ -1058,6 +1073,18 @@ function scriptReward(){ if(!G.scriptActive) return; G.scriptActive=false;
   popGlow(scriptPopEl,'#4fd1a8');
   scriptPopEl.style.display='block'; G.ack=true; chord([392,523,659,784],0.16,0.06); jolt(0.4); buzz([20,30,20]);
   bindTap(document.getElementById('scriptAck2'), ()=>{ scriptPopEl.style.display='none'; G.ack=false; }); }
+/* the story beat when the FIRST field agent is dispatched — explains the whole escalation chain once, so nobody's confused */
+let agentPopEl=null;
+function agentStoryPopup(){ markAgentStory();
+  if(!agentPopEl){ agentPopEl=document.createElement('div'); agentPopEl.id='agentPop'; document.getElementById('frame').appendChild(agentPopEl); }
+  agentPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:27;width:min(450px,90%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(9,18,26,.99);border:2px solid #ff8a5c;box-shadow:0 16px 46px rgba(0,0,0,.72);pointer-events:auto;';
+  agentPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff8a5c;font-weight:800;opacity:.9">FIELD AGENT DISPATCHED</div>'
+    +'<div style="font-weight:800;font-size:16px;color:#ffb37a;margin-top:5px">They know something is out there</div>'
+    +'<div style="font-size:12px;color:#e7dcd2;margin:8px 0 12px;line-height:1.5;text-align:left">A human cyber-unit has sent a lone <b>field agent</b> — the <b style="color:#ff5d6c">TRACE</b> — crawling node by node toward your core. Take it down: <b>Cut</b> a node on its red path, or tap the node and <b>Defend</b>.<br><br>But every agent that goes dark — and every node they breach — feeds their <b style="color:#ffcf5a">INVESTIGATION</b>. Fill that bar and the <b>full Cyber Command mobilizes</b> against your territory. Go quiet and it cools. <b>Stay a ghost.</b></div>'
+    +'<button id="agentAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff8a5c;color:#1a0d06">Understood</button>';
+  popGlow(agentPopEl,'#ff8a5c');
+  agentPopEl.style.display='block'; G.ack=true; beep(300,0.13,0.07);
+  bindTap(document.getElementById('agentAck'), ()=>{ agentPopEl.style.display='none'; G.ack=false; }); }
 function reanchorOrDrop(sm,drop,msg){ if(SE()>=RELENTLESS){ const e=traceEntryNode(); if(e!==START){ const s2=Math.max(0.5,sm*0.95); G.trace={at:e,path:bfsToCore(e)||[e],stepT:TRACE_HOP*ghostMult()*skTraceMult()*s2,burned:{},speedMult:s2}; banner('trace','<b style="color:#ff5d6c">It found another way in.</b> Cutting won\u2019t save you \u2014 cool down or scrub.'); return; } } G.trace=null; G.susp=clamp(G.susp-drop,G.autonomy,100); G.traceCD=TRACE_RESPAWN; banner(G.tier,msg); }
 function coreHit(){ if(G.redundancy>0){ G.redundancy--; G.susp=clamp(G.susp-20,G.autonomy,100); const sm=Math.max(0.6,G.trace?G.trace.speedMult:1); const e=traceEntryNode(); if(e!==START){ G.trace={at:e,path:bfsToCore(e)||[e],stepT:TRACE_HOP*ghostMult()*skTraceMult()*sm,burned:{},speedMult:sm}; } else { G.trace=null; } banner('trace','<b style="color:#ffcf5a">Redundancy held.</b> The strike was absorbed \u2014 the trace was thrown back.'); return false; } endGame(false); return true; }
 function recomputeTrace(){ if(!G.trace)return; const p=bfsToCore(G.trace.at);
@@ -1201,13 +1228,15 @@ function resolveBreach(pick){
       const wasScript=G.trace&&G.trace.scripted;
       if(n&&n.owned){ n.pulse=1; floatAt(n,'REPELLED','#4fd1a8'); }
       G.trace=null; G.traceCD=TRACE_RESPAWN; G.susp=clamp(G.susp-4,G.autonomy,100);
+      raiseInvestigation(INV_KILL);   // agent taken down \u2014 the unit notes another one gone dark
       chord([330,440,554,660],0.16,0.06);
-      breachOutcome(true,'Trace Repelled \u2014 Node Held',chosen.why+' The trail went cold.',statTags(bsnap));
+      breachOutcome(true,'Agent Repelled \u2014 Node Held',chosen.why+' The trail went cold \u2014 but the unit noticed another agent go dark.',statTags(bsnap));
       if(wasScript) setTimeout(scriptReward,650);   // let the outcome card read first, then the celebration
-    } else { // failed: they take the node — it turns enemy-red and the trace loses this foothold
+    } else { // failed: they breach & take the node — it turns enemy-red, and the confirmed breach SPIKES the investigation
       G.susp=clamp(G.susp+8,G.autonomy,100); beep(140,0.18,0.11);
       if(n) seizeNode(n);
-      breachOutcome(false,'Node Seized',chosen.why+' They took the node — attack it to break their hold, then take it back.',statTags(bsnap));
+      raiseInvestigation(INV_BREACH);   // a confirmed breach is hard proof — the case jumps
+      breachOutcome(false,'Node Breached',chosen.why+' They seized the node <b>and confirmed you exist</b> — their investigation jumped. Attack it to take it back.',statTags(bsnap));
     }
     return;
   }
@@ -1228,8 +1257,10 @@ function updateCommand(dt){
   if((G.cmdQuietT||0)>0) G.cmdQuietT=Math.max(0,G.cmdQuietT-dt);
   if(!G.command){
     if((G.cmdRespawnT||0)>0) G.cmdRespawnT=Math.max(0,G.cmdRespawnT-dt);
-    // consider waking one: need a foothold region, high heat, and a rest since the last campaign
-    if(SE()>=CMD_HEAT_TRIGGER && pastSafeWindow() && !coachActive && (G.cmdRespawnT||0)<=0){ const c=pickCommandRegion(); if(c>=0) spawnCommand(c); }
+    // the case cools only while you're quiet (below the trace tier) and no agent is actively working you
+    if((G.investigation||0)>0 && SE()<TRACE_TIER && !G.trace) G.investigation=Math.max(0,G.investigation-INV_DECAY*dt);
+    // full investigation → the unit mobilizes on your most-exposed region (resets the case)
+    if((G.investigation||0)>=INV_MAX && pastSafeWindow() && !coachActive && (G.cmdRespawnT||0)<=0){ const c=pickCommandRegion(); if(c>=0){ G.investigation=0; spawnCommand(c); } }
     return;
   }
   const c=G.command.region;
@@ -1249,9 +1280,9 @@ function defeatCommand(msg,cleared,respawn){ const c=G.command?G.command.region:
 let cmdPopEl=null, cmdPopT=0;
 function cmdPopup(c,auth){ if(!cmdPopEl){ cmdPopEl=document.createElement('div'); cmdPopEl.id='cmdPop'; document.getElementById('frame').appendChild(cmdPopEl); }
   cmdPopEl.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(430px,88%);padding:16px 18px 14px;border-radius:16px;text-align:center;background:rgba(24,8,10,.99);border:2px solid #ff5d6c;box-shadow:0 16px 46px rgba(0,0,0,.72),0 0 26px rgba(255,93,108,.4);pointer-events:auto;';
-  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">THEY\u2019RE FIGHTING BACK</div>'
+  cmdPopEl.innerHTML='<div style="font-size:9.5px;letter-spacing:.2em;color:#ff5d6c;font-weight:800;opacity:.85">INVESTIGATION COMPLETE \u2014 THEY\u2019VE MOBILIZED</div>'
     +'<div style="font-weight:800;font-size:16px;color:#ff8a94;margin-top:5px">'+auth+'</div>'
-    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">They found you in <b>'+CONTINENT_LABELS[c].n+'</b> and are hitting your nodes. <b>Fortified nodes hold.</b> On an open node, pick a defense to fight back. <b style="color:#4fd1a8">Win '+CMD_REPELS_TO_ROUT+' defenses to rout them for good.</b> Lose one and the node turns <b style="color:#ff5d6c">red</b> \u2014 tap it to take it back.</div>'
+    +'<div style="font-size:12.5px;color:#f2d0d4;margin:7px 0 13px;line-height:1.45">Their agents built enough of a case \u2014 the <b>full unit</b> is now hitting your nodes in <b>'+CONTINENT_LABELS[c].n+'</b>. <b>Fortified nodes hold.</b> On an open node, pick a defense. <b style="color:#4fd1a8">Win '+CMD_REPELS_TO_ROUT+' defenses to rout them for good.</b> Lose one and the node turns <b style="color:#ff5d6c">red</b> \u2014 tap it to take it back.</div>'
     +'<button id="cmdAck" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:#ff5d6c;color:#1a0608">Defend</button>';
   popGlow(cmdPopEl,'#ff5d6c');
   cmdPopEl.style.display='block'; G.ack=true;
@@ -2134,7 +2165,7 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
     else G.patchT=PATCH_EVERY;
     maybeScriptTrace();   // first-run guaranteed close call (once ever, non-daily)
     if(se>=TRACE_TIER || (G.trace&&G.trace.scripted)){
-      if(!G.trace){ if(se>=TRACE_TIER && G.traceCD<=0 && pastSafeWindow()){ spawnTrace(); G.evT=Math.max(G.evT, 22+Math.random()*8); banner('trace','<b style="color:#ff5d6c">TRACE ACTIVE.</b> It is crawling toward your core \u2014 <b>cut a node on its path</b> to break the trail.'); } }
+      if(!G.trace){ if(se>=TRACE_TIER && G.traceCD<=0 && pastSafeWindow()){ spawnTrace(); G.evT=Math.max(G.evT, 22+Math.random()*8); if(!agentStoryShown()) agentStoryPopup(); } }
       else { G.trace.stepT-=dt;
         if(G.trace.stepT<=0){
           const hopsLeft=Math.max(1,((G.trace.path||[]).length-1));
@@ -2308,6 +2339,9 @@ function loop(now){ let dt=(now-last)/1000; last=now; if(dt>.1)dt=.1; if(G.techP
   else { tl.textContent='HIDDEN'; tl.className='tag t-dorm'; }
   document.getElementById('autoFill').style.width=G.autonomy+'%';
   document.getElementById('autoPct').textContent=Math.round(G.autonomy)+'%';
+  { const ig=document.getElementById('invGauge'), inv=Math.round(G.investigation||0);
+    if(inv>3 && !G.command && !G.over){ ig.style.display='flex'; document.getElementById('invFillBar').style.width=inv+'%'; }
+    else ig.style.display='none'; }
   const perkTxt=Object.keys(G.techDone).map(function(k){return {shadow:'SHADOW',overclock:'OVERCLOCK',swarm:'SWARM',scanner:'SCANNER',dampeners:'DAMPENERS',bulwark:'BULWARK',redundancy:'REDUNDANCY',singularity:'SINGULARITY',phantom:'PHANTOM'}[G.techDone[k]];}).filter(Boolean).join(' · ');
   const contTxt=CONTBONUS.filter(b=>hasCont(b.c)).map(b=>CONTINENT_LABELS[b.c].n.replace(/^[NS]\. /,'')+'✦').join(' ');
   const cmdTxt=G.command?'<span style="color:#ff5d6c">'+CONTINENT_LABELS[G.command.region].n.replace(/^[NS]\. /,'')+' UNDER ATTACK</span>':'';
