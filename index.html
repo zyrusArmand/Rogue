@@ -377,7 +377,7 @@
    ============================================================ */
 /* version = v1.<number of shipped changes>. 50 builds from this thread + 13 from a separate
    thread = 63. Increment the number by 1 on every release. */
-const GAME_VERSION='1.98';
+const GAME_VERSION='1.99';
 const ROT=false; // portrait gameplay is gated, never rendered rotated
 document.getElementById('homeVer').textContent='v'+GAME_VERSION;
 /* world events wait while the player is actively using HUD controls */
@@ -1549,7 +1549,8 @@ function resolveChoice(which){ if(!G.choice)return; const ev=G.choice.ev; G.choi
     +'<div class="evfx">'+metricLine(tags,col)+'</div>'
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   G.ack=true; beep(cls==='trace'?190:340,0.09,0.05);
-  bindTap(document.getElementById('ackBtn'), ()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); });
+  // scope the lookup to THIS popup — the toast reuses the same id, and a global getElementById could bind the wrong (hidden) one, soft-locking the game
+  bindTap(choiceEl.querySelector('#ackBtn'), ()=>{ choiceEl.style.display='none'; G.ack=false; eventBreather(); });
 }
 // "#rrggbb" -> "r,g,b" for the --pc pulse-glow variable
 function popRgb(hex){ hex=hex.replace('#',''); const n=parseInt(hex,16); return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255); }
@@ -1567,7 +1568,8 @@ function toast(title,desc,cls,tags){ if(!toastEl){ toastEl=document.createElemen
     +'<button id="ackBtn" style="width:100%;padding:12px;border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:'+col+';color:#04121a">Got it</button>';
   popGlow(toastEl,col);
   toastEl.style.display='block'; beep(cls==='trace'?190:340,0.09,0.05);
-  bindTap(document.getElementById('ackBtn'), dismissAck);
+  // scope to THIS popup (the choice outcome reuses the same id) and add a whole-card fallback so a tap can never be lost
+  bindTap(toastEl.querySelector('#ackBtn'), dismissAck); bindTap(toastEl, dismissAck);
   G.ack=true;
 }
 /* after any non-tutorial popup closes, hold the next world event at least 30s away */
@@ -1578,7 +1580,8 @@ function dismissAck(){ if(toastEl) toastEl.style.display='none'; G.ack=false; ev
    handle touchend (preventing the synthetic click) so one tap = one dismiss */
 function bindTap(btn, fn){ if(!btn) return; const h=(e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } fn(); };
   btn.style.touchAction='manipulation'; btn.style.webkitTapHighlightColor='transparent';
-  btn.onclick=h; btn.addEventListener('touchend',h,{passive:false}); }
+  if(btn._th) btn.removeEventListener('touchend',btn._th);   // never stack listeners on a reused element
+  btn._th=h; btn.onclick=h; btn.addEventListener('touchend',h,{passive:false}); }
 
 /* canvas */
 const cvs=document.getElementById('net'),ctx=cvs.getContext('2d');
